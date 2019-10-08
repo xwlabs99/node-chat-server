@@ -1,10 +1,11 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Group, GroupMember, UserGroupItem, UserGroupList } from '../interface/model.interface';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { RedisHelper } from '../helper/redisHelper.provider';
 import { Redis } from '../../../provider/redis.provider';
 import { UserService } from './user.service';
+import { ChatService } from '../chat.service';
 
 
 @Injectable()
@@ -16,35 +17,41 @@ export class GroupService implements OnModuleInit {
         @InjectModel('GroupItem') private readonly userGroupModel: Model<UserGroupItem>,
         private readonly redisHelper: RedisHelper,
         private readonly userService: UserService,
+        @Inject(forwardRef(() => ChatService))
+        private readonly chatService: ChatService,
         private readonly redis: Redis,
        
     ){}
-    onModuleInit() {
-        /*
-        this.createGroup(0, 'friendInvite', '新的好友', 'system');    
-        this.updateGroupInfo('friendInvite', {
-            avatar: JSON.stringify({
-                name: 'md-person-add',
-                type: 'ionicon',
-                color: '#FFCC33',
-            }) 
-        });
-        */
+    
+    async onModuleInit() {
+        try {
+            await this.createGroup(0, 'friendInvite', '新的好友', 'system').then(() => {
+                this.updateGroupInfo('friendInvite', {
+                    avatar: JSON.stringify({
+                        name: 'md-person-add',
+                        type: 'ionicon',
+                        color: '#FFCC33',
+                    }) 
+                });
+            });  
+        } catch(err) {
+            return;
+        }
     }
 
-    async createGroup(createrId: number, groupId: string, name: string, type: string) {
+    async createGroup(createrId: number, groupId: string, groupName: string, groupType: string) {
         const group = await this.groupModel.findOne({ groupId }).exec();
         if(group) {
             throw new Error('该ID已经存在');
         } else {
-            const newGroup = new this.groupModel({ groupId, name, type, createrId });
+            const newGroup = new this.groupModel({ groupId, groupName, groupType, createrId });
             const group = await newGroup.save();
             return group;
         }
     }
 
     async getGroupBaseInfo(groupId: string | string[]): Promise<Group[]> {
-        const group = await this.groupModel.find({ groupId }, [ 'type', 'name', 'groupId', 'avatar', 'type' ]).exec();
+        const group = await this.groupModel.find({ groupId }, [ 'type', 'groupName', 'groupId', 'avatar', 'groupType' ]).exec();
         if(group) {
             return group;
         } else {
@@ -78,25 +85,38 @@ export class GroupService implements OnModuleInit {
     async addGroupMember(operaterId: number, groupId: string, memberIds: number[]): Promise<GroupMember[]> {
         try {
             const group = await this.groupModel.findOne({ groupId }).exec();
+            const operaterInfo = group.members.find(member => member.userId === operaterId);
             if(group) {
                 // if(!this._hasPermission(operaterId, group)) {
                 //     throw new Error('你没有邀请群成员的权限');
                 // }
+                console.log(group);
                 const groupMembers = group.members;
                 const filterMembers = memberIds.filter(userId => (groupMembers.findIndex(member => member.userId === userId) === -1));
                 if(filterMembers.length === 0) {
                     throw new Error('要添加的成员均在群中');
                 }
+
                 const userInfos = await this.userService.getMuiltUserBaseInfo(filterMembers, [ 'name', 'userId' ]);
-                const newMembers = userInfos.map(userInfo => 
-                    new this.groupMemberModel({ 
+                const newMembersName = [];
+                const newMembers = userInfos.map(userInfo => {
+                    newMembersName.push(userInfo.name);
+                    return new this.groupMemberModel({ 
                         alias: userInfo.name, 
                         userId: userInfo.userId 
                     })
-                );
-    
-                group.members.concat();
+                });
+
+                group.members = group.members.concat(newMembers);
                 const save = await group.save();
+
+                this.chatService.sendSystemMessageToGroup(
+                    groupId, 
+                    `${operaterInfo.alias}邀请了 ${newMembersName.join(',')} 进入该群`,
+                    { type: 'normal' }
+                );
+
+
                 if(!save) {
                     throw new Error('添加群成员失败');
                 }
@@ -135,6 +155,11 @@ export class GroupService implements OnModuleInit {
                     return memberIds.findIndex(userId => member.userId === userId) === -1;
                 });
                 group.members = filterMembers;
+
+                memberIds.forEach((userId) => {
+                    this.chatService.sendSystemMessageToOne(groupId, userId, '你已经被移出群聊', { type: 'normal' });
+                });
+               
                 return await group.save();
             } else {
                 throw new Error('未找到群聊信息');
@@ -194,7 +219,21 @@ export class GroupService implements OnModuleInit {
             }
         })
         const addedGroups = groupIds.map(groupId => new this.userGroupModel({ groupId }));
-        result.groups.concat(addedGroups);
+        result.groups = result.groups.concat(addedGroups);
+        return await result.save();
+    }
+
+    async moveFromUserGroupList(userId: number, groupIds: string[]){
+        let result: UserGroupList = await this.groupListModel.findOne({ userId }).exec();
+        if(!result) {
+            result = new this.groupListModel({ userId });
+        }
+        result.groups = result.groups.filter(group => {
+            if(groupIds.findIndex(groupId => groupId === group.groupId) > -1) {
+                return false;
+            } 
+            return true;
+        });
         return await result.save();
     }
 }

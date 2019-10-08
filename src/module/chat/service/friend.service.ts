@@ -66,7 +66,7 @@ export class FriendService {
             const list = await this.friendListModel.findOne({ userId });
             if(list) {
                 const userIds = list.friends.map(friend => friend.userId);
-                const userInfo = this.userService.getMuiltUserBaseInfo(userIds, [ 'userId', 'name' ]);
+                const userInfo = await this.userService.getMuiltUserBaseInfo(userIds, [ 'userId', 'name', 'avatar' ]);
                 return {
                     status: 1,
                     data: {
@@ -143,7 +143,27 @@ export class FriendService {
         }
     }
 
-    async updateFriendInfo(userId: number, targetUserId: number, newInfo: object) {
+    async findFriendInfo(userId: number, targetUserId: number): Promise<Friend> {
+        try {
+            targetUserId = Number(targetUserId);
+            userId = Number(userId);
+        } catch(err) {
+            throw new Error(err.message);
+        }
+
+        const friendList = await this.friendListModel.findOne({ userId });
+        const findFriend = friendList.friends.find(friend => {
+            return Number(friend.userId) === Number(targetUserId);
+        });
+
+        if(friendList && findFriend) {
+            return findFriend;
+        } else {
+            return null;
+        }
+    }
+
+    async getOneFriendInfo(userId: number, targetUserId: number) {
         try {
             targetUserId = Number(targetUserId);
             userId = Number(userId);
@@ -156,7 +176,31 @@ export class FriendService {
             const friend = list && list.friends && list.friends.find(friend => friend.userId === targetUserId);
             console.log(list, targetUserId);
             if(friend) {
-                Object.assign(friend, newInfo);
+                return friend;
+            } else {
+                return null;
+            }
+        } catch(err) {
+            throw new Error(err.message);
+        }
+    }
+
+    async updateFriendInfo(userId: number, targetUserId: number, newInfo: object) {
+        try {
+            targetUserId = Number(targetUserId);
+            userId = Number(userId);
+        } catch(err) {
+            throw new Error(err.message);
+        }
+
+        try {
+            const list = await this.friendListModel.findOne({ userId });
+            const index = list && list.friends && list.friends.findIndex(friend => friend.userId === targetUserId);
+            console.log(list, targetUserId, newInfo);
+            console.log(index);
+            if(index > -1) {
+                list.friends[index] = Object.assign(list.friends[index], newInfo);
+                console.log(list);
                 await list.save();
                 return {
                     status: 1,
@@ -170,6 +214,6 @@ export class FriendService {
     }
 
     private _getIsFriendKey(userId: number, targetUserId: number) {
-        return this.redisHelper.WithRedisNameSpace(`isFriend:${userId < targetUserId ? `${userId}_${targetUserId}` : `${targetUserId}_${userId}`}`);
+        return this.redisHelper.WithRedisNameSpace(`IsFriend:${userId < targetUserId ? `${userId}_${targetUserId}` : `${targetUserId}_${userId}`}`);
     }
 }

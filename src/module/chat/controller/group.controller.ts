@@ -1,15 +1,16 @@
 import { Injectable, Controller, Get, Post, Body, Query, Param, Put } from '@nestjs/common';
 import { GroupService } from '../service/group.service';
 import { UserService } from '../service/user.service';
-const moment = require('moment');
-@Controller('chat/group')
+import { Group } from '../interface/model.interface';
+
+@Controller('chat')
 export class GroupController {
     constructor(
       private readonly groupService: GroupService,
       private readonly userService: UserService,
     ){}
 
-    @Post()
+    @Post('group')
     async createOrEnterGroup(@Body('data') data, @Body('authorization') auth) {
         try {
             const { groupType, toId, storeId } = data;
@@ -61,13 +62,16 @@ export class GroupController {
                     }
                 }
             } else if (groupType === 'store') {
-                const { groupMember } = data;
+                const { groupMember, groupId } = data;
+                if(!groupId) {
+                    throw new Error('缺少门店ID');
+                }
                 const groupName = '新建门店'+ new Date().getTime();
                 const initMemberIdArray = [ createrId, ...groupMember];
-                const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, groupName, 'store');
-                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray);
+                const res_createGroup = await this.groupService.createGroup(createrId, groupId, groupName, 'store');
+                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, groupId, initMemberIdArray);
                 initMemberIdArray.forEach(userId => {
-                    this.groupService.addToUserGroupList(userId, [ createGroupId ]);
+                    this.groupService.addToUserGroupList(userId, [ groupId ]);
                 })
                 console.log('创建门店聊天组状态', res_createGroup);
                 console.log('添加成员', res_addMemebersNum)
@@ -84,6 +88,7 @@ export class GroupController {
             }
 
         } catch(err) {
+            console.log(err);
             return {
                 status: 0,
                 message: err.message
@@ -91,14 +96,14 @@ export class GroupController {
         }
     }
 
-    @Get()
-    async getGroupInfo(@Query() data) {
+    @Get('group/:id')
+    async getGroupInfo(@Param('id') groupId, @Body('authorization') auth) {
+        const { id: queryUserId } = auth;
         try {
-            const { groupId } = data;
             if(!groupId) {
                 throw new Error('缺少必要参数');
             }
-            const query = this.groupService.getOneGroupAllInfo(groupId);
+            const query = await this.groupService.getOneGroupAllInfo(groupId);
             return {
                 status: 1,
                 data: query,
@@ -113,10 +118,11 @@ export class GroupController {
         
     }
 
-    @Get(':id')
-    async getGroupBaseInfo(@Param('id') gid, @Body('authorization') auth) {
+    @Get('group')
+    async getMuiltGroupBaseInfo(@Query() data, @Body('authorization') auth) {
+        const { gids } = data;
         try {
-            const groupInfo = await this.groupService.getGroupBaseInfo([ gid ]);
+            const groupInfo = await this.groupService.getGroupBaseInfo(gids);
             return {
                 status: 1,
                 data: groupInfo,
@@ -129,8 +135,79 @@ export class GroupController {
         }
     }
 
-    @Put(':id')
-    async updateGroupInfo(@Param('id') gid, @Body('data') newInfo) {
+    @Put('group/:id')
+    async updateGroupInfo(@Param('id') groupId, @Body('data') newInfo: any, @Body('authorization') auth) {
+        try {
+            const { id: userId } = auth;
+            const { ignoreAllMsg, ignoreAutoMsg, groupName, alias, announcement } = newInfo;
+            const oldInfo = await this.groupService.getOneGroupAllInfo(groupId);
+            if(groupName) {
+                oldInfo.groupName = groupName;
+                delete newInfo.groupName;
+            }
+            if(announcement) {
+                oldInfo.announcement = announcement;
+                delete newInfo.announcement;
+            }
+            if(ignoreAllMsg !== undefined || ignoreAutoMsg !== undefined || alias !== undefined) {
+                const index = oldInfo.members.findIndex(member => member.userId === userId);
+                if(index > -1) {
+                    oldInfo.members[index] = Object.assign(oldInfo.members[index], newInfo);
+                } else {
+                    throw new Error('不在群中无法操作');
+                }
+            }
+            return {
+                status: 1,
+                data: await oldInfo.save(),
+            };
+
+        } catch(err) {
+            console.log(err);
+            return {
+                status: 0,
+                message: '更新失败',
+            }
+        }
         
     }
+
+    @Post('groupmember/:id')
+    async changeGroupMember(@Param('id') gid, @Body('data') body, @Body('authorization') auth) {
+        try {
+            const { isAdd = true, members } = body;
+            const { id: operaterId } = auth;
+            console.log(gid, body);
+            if(isAdd) {
+                const res = await this.groupService.addGroupMember(operaterId, gid ,members);
+                members.forEach(uid => {
+                    this.groupService.addToUserGroupList(uid, [ gid ]);
+                })
+                if(res) {
+                    return {
+                        status: 1,
+                    }
+                } else {
+                    throw new Error('该用户已经在群里');
+                }
+            } else {
+                const res = await this.groupService.moveGroupMember(operaterId, gid, members);
+                members.forEach(uid => {
+                    this.groupService.moveFromUserGroupList(uid, [ gid ]);
+                })
+                if(res) {
+                    return {
+                        status: 1,
+                    }
+                }
+            }
+            throw new Error('该用户已经在群里');
+        } catch(err) {
+            return {
+                status: 0,
+                message: err.message
+            }
+        }
+        
+    } 
 }

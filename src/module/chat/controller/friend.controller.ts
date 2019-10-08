@@ -11,8 +11,9 @@ export class FriendController {
     ){}
 
     //获取用户好友列表
-    @Get('friend/:id')
-    async getFriendList(@Param('id') userId) {
+    @Get('friend')
+    async getFriendList(@Body('authorization') auth) {
+        const { id: userId } = auth;
         try {
             const result = await this.friendService.getFriendListMember(userId);
             if(result.status === 1) {
@@ -37,7 +38,7 @@ export class FriendController {
 
     //添加好友
     @Post('friend')
-    async addToFriendList(@Body() data): Promise<object> {
+    async addToFriendList(@Body('data') data): Promise<object> {
         try {
             const { userId, targetUserId } = data;
             if(!userId || !targetUserId) {
@@ -58,7 +59,7 @@ export class FriendController {
 
     //删除好友
     @Delete('friend')
-    async deleteFromFriendList(@Body() data): Promise<object> {
+    async deleteFromFriendList(@Body('data') data): Promise<object> {
         try {
             const { userId, targetUserId } = data;
             await this.friendService.moveFriendListMember(userId, targetUserId);
@@ -67,6 +68,7 @@ export class FriendController {
                 message: '删除好友成功',
             }
         } catch(err) {
+            console.log(err);
             return {
                 status: 0,
                 message: '删除好友失败',
@@ -76,18 +78,19 @@ export class FriendController {
 
        //添加好友
     @Put('friend')
-    async updateFriendInfo(@Body() data): Promise<object> {
+    async updateFriendInfo(@Body('data') data): Promise<object> {
         try {
             const { userId, targetUserId, newInfo } = data;
             if(!userId || !targetUserId || !newInfo) {
                 throw new Error('缺少必要参数');
             }
-            const addFriend = await this.friendService.updateFriendInfo(userId, targetUserId, data);
+            const addFriend = await this.friendService.updateFriendInfo(userId, targetUserId, newInfo);
             return {
                 status: 1,
                 // data: addFriend
             }
         } catch(err) {
+            console.log(err);
             return {
                 status: 0,
                 message: err.message

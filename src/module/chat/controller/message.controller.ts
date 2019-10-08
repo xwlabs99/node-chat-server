@@ -1,10 +1,9 @@
 import { Injectable, Controller, Get, Post, Put, Body, UseInterceptors, Req, Param, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { MessageService } from './message.service';
-import { StorageService } from '../../../../service/objectStorage/storage.provider';
-import { Message } from './message.interface';
+import { MessageService } from '../service/message.service';
 import { join } from 'path';
-import bodyParser = require('body-parser');
+
+
 const fs = require('fs');
 const util = require('util');
 const rename = util.promisify(fs.rename);
@@ -12,15 +11,47 @@ const rename = util.promisify(fs.rename);
 export class MessageController {
     constructor(
        private readonly messageService: MessageService,
-       private readonly storageService: StorageService
     ){}
     
+    @Get()
+    async pullMessageList(@Body('authorization') auth) {
+        const { id: userId } = auth;
+        if(!userId) {
+            return {
+                status: 0,
+            }
+        }
+        const list = await this.messageService.getMsgList(userId);
+        return {
+            status: 1,
+            data: list,
+        }
+    }
+
+    @Post()
+    async clearMessageList(@Body('authorization') auth, @Body('data') data) {
+        console.log('移除消息');
+        const { msgIds = [] } = data;
+        const { id: userId } = auth;
+        if(!userId) {
+            return {
+                status: 0,
+            }
+        }
+        if(msgIds.length !== 0) {
+            await this.messageService.removeMsgs(userId, msgIds);
+        }
+        
+        return {
+            status: 1,
+        }
+    }
+
     @Post('voice/upload')
     @UseInterceptors(FileInterceptor('file',{ dest: join('..', 'static/voice') }))
     async uploadVoice(@Req() req, @Query() query) {
         const { originalname, path } = req.file;
         const err = await rename(join(path), join('..', 'static/voice', originalname));
-        console.log('上传文件', err);
         if(err) {
             return {
                 status: 0,

@@ -3,6 +3,8 @@ import { User, UserFriendList, UserGroupList } from '../interface/model.interfac
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { ServiceResult } from '../interface/service.interface';
+import { Redis } from '../../../provider/redis.provider';
+import { RedisHelper } from '../helper/redisHelper.provider';
 
 @Injectable()
 export class UserService {
@@ -10,9 +12,11 @@ export class UserService {
         @InjectModel('User') private readonly userModel: Model<User>,
         @InjectModel('FriendList') private readonly friendListModel: Model<UserFriendList>,
         @InjectModel('GroupList') private readonly groupListModel: Model<UserGroupList>,
+        private readonly redisHelper: RedisHelper,
+        private readonly redis: Redis,
     ){}
     
-    async createUser(userInfo: User): Promise<ServiceResult> {
+    async createUser(userInfo: any): Promise<ServiceResult> {
         const { userId, name } = userInfo;
         if(!userId || !name) {
             return { status: 0, message: '缺少参数' };
@@ -43,6 +47,14 @@ export class UserService {
         }
     }
 
+
+    async getRedisUserInfo(userId: number, fields: string[]) {
+        return await this.redis.HMGET(
+            this.redisHelper.WithRedisNameSpace(`USER:${userId}`), 
+            fields
+        );
+    }
+    
     async updateUser(userId: number, userInfo: User | object): Promise<User> {
         try {
             const result: User = await this.userModel.findOneAndUpdate(

@@ -13,6 +13,9 @@ import { GroupService } from './service/group.service';
 import { ChatGateway } from './chat.gateway';
 import { MessageService } from './service/message.service';
 import { AuthHelper } from './helper/authHelper.provider';
+import { ChatService } from './chat.service';
+import { GroupController } from './controller/group.controller';
+import { MessageController } from './controller/message.controller';
 
 @Module({
   imports: [
@@ -31,6 +34,8 @@ import { AuthHelper } from './helper/authHelper.provider';
   controllers: [
     UserController,
     FriendController,
+    GroupController,
+    MessageController,
   ],
   providers: [
     UserService,
@@ -41,6 +46,7 @@ import { AuthHelper } from './helper/authHelper.provider';
     RedisHelper,
     AuthHelper,
     ChatGateway,
+    ChatService
   ],
 })
 export class ChatModule {}

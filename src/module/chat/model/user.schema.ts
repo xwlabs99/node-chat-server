@@ -16,12 +16,10 @@ export const UserSchema = new mongoose.Schema({
         type: String,
         default: 'normal',
     },
-    avatar: String,
-    // socketId: String,
-    // systemPushId: String,
-    // systemPushType: String,
-    // normalPushId: String,
-    // normalPushType: String,
+    avatar: {
+        type: String,
+        default: '',
+    },
 });
 
 

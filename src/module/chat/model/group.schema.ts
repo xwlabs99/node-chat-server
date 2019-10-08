@@ -13,14 +13,15 @@ export const GroupMember = new mongoose.Schema({
 });
 
 export const Group = new mongoose.Schema({
-    name: String,
+    groupName: String,
+    announcement: String,
     groupId: {
         type: String,
         required: true,
         index: true,
         unique: true,
     },
-    type: {
+    groupType: {
         type: String,
         required: true,
     },

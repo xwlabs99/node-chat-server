@@ -4,6 +4,8 @@ import { UserService } from '../service/user.service';
 import { join } from 'path';
 import { User } from '../interface/model.interface';
 import { Redis } from '../../../provider/redis.provider';
+import { GroupService } from '../service/group.service';
+import { FriendService } from '../service/friend.service';
 const fs = require('fs');
 const util = require('util');
 const rename = util.promisify(fs.rename);
@@ -12,6 +14,8 @@ const deleteFile = util.promisify(fs.unlink);
 export class UserController {
     constructor(
         private readonly userService: UserService,
+        private readonly groupService: GroupService,
+        private readonly friendService: FriendService,
         private readonly redis: Redis,
     ){}
 
@@ -32,14 +36,23 @@ export class UserController {
         }
     }
 
+
+    // 需要缓存
     @Get('user/info/:id')
-    async getUserInfo(@Param('id') userId: number) {
+    async getUserInfo(@Param('id') targetId: number, @Body('authorization') auth) {
         try {
-            const result = await this.userService.getOneUserInfo(userId);
+            const { id: userId } = auth;
+            const result = await Promise.all([
+                this.userService.getOneUserInfo(targetId),
+                this.friendService.findFriendInfo(userId, targetId)
+            ]);
             if(result) {
                 return {
                     status: 1,
-                    data: result,
+                    data: {
+                        info: result[0],
+                        friend: result[1],
+                    },
                 }
             } else {
                 throw new Error('找不到用户');
@@ -125,7 +138,7 @@ export class UserController {
     @Get('user/group/:id')
     async getUserGroupList(@Param('id') userId) {
         try {
-            const UserGroupList = await this.userService.getUserGroupList(userId);
+            const UserGroupList = await this.groupService.getUserGroupList(userId);
             return {
                 status: 1,
                 data: UserGroupList

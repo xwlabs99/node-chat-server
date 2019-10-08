@@ -17,7 +17,7 @@ export class MessageService {
 
     async addToMsgList(userId: number, msg: Message): Promise<boolean> {
         return await this.redis.HMSET(this.WrapInfoKey(userId), {
-            [ msg.msgId ]: JSON.stringify(msg), 
+            [ msg.messageId ]: JSON.stringify(msg), 
         });
     }
 

@@ -4,14 +4,11 @@ import {
     WebSocketServer,
   } from '@nestjs/websockets';
 import { Client, Server, Socket } from 'socket.io';
-import { Injectable, Inject, forwardRef, HttpService } from '@nestjs/common';
-import { UserService } from './service/user.service';
-import { MessageService } from './service/message.service';
-import { GroupService } from './service/group.service';
-import { FriendService } from './service/friend.service';
+import { Injectable } from '@nestjs/common';
 import { Redis } from '../../provider/redis.provider';
 import { AuthHelper } from './helper/authHelper.provider';
 import { RedisHelper } from './helper/redisHelper.provider';
+import { ChatService } from './chat.service';
 
 interface onConnect {
     userId: number,
@@ -27,7 +24,10 @@ interface onConnect {
     socketId: string,
 }
 
-
+interface NormalMessage {
+    data: object,
+    type: string,
+}
 
 @Injectable()
 @WebSocketGateway()
@@ -36,10 +36,7 @@ export class ChatGateway {
     server: Server;
 
     constructor(
-        private readonly userService: UserService,
-        private readonly messageService: MessageService,
-        private readonly groupService: GroupService,
-        private readonly friendService: FriendService,
+        private readonly chatService: ChatService,
         private readonly authHelper: AuthHelper,
         private readonly redisHelper: RedisHelper,
         private readonly redis: Redis,
@@ -48,28 +45,22 @@ export class ChatGateway {
     private _getClient(socketId: string): Socket {
         return this.server.sockets.sockets[socketId];
     }
-
-   
-
-    async sendMessageToClient(uid, msg) {
-       
-    }
-
-
     //-----------单点登录-------------
     // 客户端连接
     @SubscribeMessage('connected')
     async onConnect(client: Client, data: onConnect) {
         const { id: socketId } = client;
-        const { authToken, userId } = data;
+        const { authToken, userId, name } = data;
         const auth: any = await this.authHelper.JWTverify(authToken);
+        // console.log(auth, userId);
         if(auth && auth.id === userId) {
             const connectInfo: any = await this._getUserLoginInfo(userId);
             // 第一次登录
             if(!connectInfo) {
                 console.log('第一次登录');
+                await this.chatService.initUserInfo(userId, name);
                 const loginTimestamp = String(new Date().getTime());
-                this._setUserLoginInfo({...data, socketId, loginTimestamp });
+                await this._setUserLoginInfo({...data, socketId, loginTimestamp });
                 return {
                     status: 1,
                     loginTimestamp
@@ -142,7 +133,7 @@ export class ChatGateway {
         }
        
     }
-    
+
     private async _getUserLoginInfo(userId) {
         const key = this.redisHelper.WithRedisNameSpace(`USER:${userId}`);
         if(await this.redis.EXISTS(key)) {
@@ -151,30 +142,35 @@ export class ChatGateway {
             return null;
         }
     }
+
+    @SubscribeMessage('disconnected')
+    async onDisconnect(client: Client, data: onConnect) {
+        
+    }
     //-----------单点登录-------------
 
 
     
-    
-    
-    @SubscribeMessage('disconnected')
-    async onDisconnect(client: Client, data: onConnect) {
-    }
-    
+    //-----------消息中转-------------
     @SubscribeMessage('newMessage')
-    async reveiveNewMessage(client: Client, msg: Message) {
+    async receiveNewMessage(client: Client, msg: NormalMessage) {
         const { type, data } = msg;
         console.log('新消息',msg);
         if(type === 'chat') {
-            const res = await this.socketService.processChatTypeMsg(data);
-            return res;
+            return await this.chatService.processChatTypeMsg(data);
         } else if(type === 'extra') {
-            await this.socketService.processExtraTypeMsg(data);
-            return {
-                status: 1,
-            }
-        }
-        
+            return await this.chatService.processExtraTypeMsg(data);
+        }  
     }
+
+    @SubscribeMessage('confirmReceive')
+    async confirmReceiveMessage(client: Client, { messageId, userId }) {
+        return await this.chatService.confirmReceive(messageId, userId);        
+    }
+
+    //-----------消息中转-------------
+    
+    
+   
 }
 

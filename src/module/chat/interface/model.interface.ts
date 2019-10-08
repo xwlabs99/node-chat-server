@@ -1,12 +1,12 @@
 import { Document } from 'mongoose';
 
 export interface Message extends Document{
-    msgId: string,
-    msgType: string,
+    messageId: string,
+    messageType: string,
     content: string,
     time: number,
     groupId: string,
-    senderId: number,
+    userId: number,
     renderTime: boolean,
 }
 
@@ -37,9 +37,10 @@ export interface GroupMember extends Document {
 
 
 export interface Group extends Document {
-    name: string,
+    groupName: string,
     groupId: string,
     groupType: string,
+    announcement: string,
     members: Array<GroupMember>,
     createrId: number,
 }
