@@ -6,6 +6,7 @@ import { MessageService } from './service/message.service';
 import { GroupService } from './service/group.service';
 import { FriendService } from './service/friend.service';
 import { Message } from './interface/model.interface';
+import { PushGateway } from '../push/push.gateway';
 
 interface sendOptions {
     checkPermission? : boolean 
@@ -25,6 +26,7 @@ export class ChatService {
         @Inject(forwardRef(() => GroupService))
         private readonly groupService: GroupService,
         private readonly friendService: FriendService,
+        private readonly pushService: PushGateway
     ){}
     
     async initUserInfo(userId: number, name: string) {
@@ -32,9 +34,12 @@ export class ChatService {
         return await this.userService.createUser({ userId, name, avatar: '' });
     }
 
-    private async _getClient(userId: number): Promise<Socket> {
-        const { socketId }: any  = await this.userService.getRedisUserInfo(userId, [ 'socketId' ]);
-        return this.server.sockets.sockets[socketId];
+    private async _getClient(userId: number): Promise<{ client: Socket, pushToken: string }> {
+        const { socketId, pushToken }: any  = await this.userService.getRedisUserInfo(userId, [ 'socketId', 'pushToken' ]);
+        return { 
+            client: this.server.sockets.sockets[socketId],
+            pushToken,
+        };
     }
 
     async confirmReceive(userId: number, messageId: string) {
@@ -53,18 +58,21 @@ export class ChatService {
     }
 
     async sendMessageToClient(userId: number, msg) {
-        const client = await this._getClient(userId);
+        const { client, pushToken } = await this._getClient(userId);
         this.messageService.addToMsgList(userId, msg);
         if(client) {
             client.emit('newMessage', msg);
             return undefined;
+        } else {
+            return pushToken;
         }
     }
 
     async sendMessageToGroup(senderId: number, groupId: string, msg, options?: sendOptions) {
         try {
             const { checkPermission = true } = options || {};
-            const { members, groupType } = await this.groupService.getOneGroupAllInfo(groupId);
+            // 这里加缓存优化
+            const { members, groupType } = await this.groupService.getOneGroupAllMemberInfo(groupId);
             const receivers = members.filter(member => member.userId !== senderId);
             // 检验好友关系或者群成员关系
             if(checkPermission) {
@@ -85,12 +93,11 @@ export class ChatService {
                 }
             }
            
+            const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
+                return this.sendMessageToClient(receiver.userId, msg);
+            }))).filter(pushToken => pushToken);
+            // this.pushService.sendPushToMuilt(pushTargets, '123', '123');
 
-            receivers.forEach(member => {
-                if(senderId!== member.userId) {
-                    this.sendMessageToClient(member.userId, msg);
-                }
-            })
             return {
                 status: 1,
             }
@@ -102,7 +109,10 @@ export class ChatService {
         }
     }
 
-    async sendSystemMessageToGroup(gid: string, content: string, payload: object) {
+    async sendSystemMessageToGroup(gid: string, content: string, payload?: object) {
+        if(!payload) {
+            payload = { type: 'normal' };
+        }
         const userId = 0;
         const newSendSystemMessage = {
             messageId: `${gid}:${userId}:${new Date().getTime()}`,
@@ -120,7 +130,10 @@ export class ChatService {
         this.sendMessageToGroup(userId, gid, newSendSystemMessage, { checkPermission: false });
     }
 
-    async sendSystemMessageToOne(groupId:string, targetUserId: number, content: string, payload: object) {
+    async sendSystemMessageToOne(groupId:string, targetUserId: number, content: string, payload?: object) {
+        if(!payload) {
+            payload = { type: 'normal' };
+        }
         const userId = 0;
         const newSendSystemMessage = {
             messageId: `${groupId}:${userId}:${new Date().getTime()}`,
@@ -149,41 +162,6 @@ export class ChatService {
                 userId: userId,
                 tips,
             });
-        }/* else if(name === 'newGroupInvitation') {
-            const { groupId, userId, groupType } = data;
-            console.log('创建群聊, 发通知', data);
-            const { name: userName }: any  = await this.userService.(userId, [ 'name' ]);
-            this.sendNormalGroupSystemMessage(
-                groupId, 
-                `${userName}创建了${groupType === 'store' ? '门店': '群聊'}`, 
-                { type: 'normal' },
-            );
-        } else if(name === 'changeGroupMember') {
-            const { userId, isAdd, groupId } = data;
-            console.log('移出或加入群聊, 发通知', data);
-            if(isAdd) {
-                const { userId, groupId, members } = data;
-                const { name } = await this.userService.getOneUserInfo(userId, ['name']);
-                const nameArray = await Promise.all(members.map(async uid => await this.chatUserService.getInfoOneField(uid, 'name')));
-                const nameString = nameArray.join(',');
-                console.log(nameString);
-                this.sendNormalGroupSystemMessage(
-                    groupId,
-                    `${name}邀请了 ${nameString} 进入该群`,
-                    { type: systemMsgType.normal },
-                );
-            } else {
-                const { targetUserId } = data;
-                const name = await this.chatUserService.getInfoOneField(userId, 'name');
-                this.sendNormalGroupSystemMessageToOne(
-                    groupId, 
-                    targetUserId, 
-                    `你已经被${name}移出本群`,
-                    { type: systemMsgType.normal },
-                );
-            }
-        } else {
-
-        }*/
+        }
     }
 }

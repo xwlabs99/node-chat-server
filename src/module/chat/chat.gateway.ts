@@ -12,16 +12,16 @@ import { ChatService } from './chat.service';
 
 interface onConnect {
     userId: number,
-    name: string,
-    pushToken: string,
-    pushType: string,
+    name?: string,
+    pushToken?: string,
+    pushType?: string,
     authToken?: string,
-    platform: string,
-    buildId: string,
-    systemVersion: string,
-    deviceBrand: string,
-    loginTimestamp: string,
-    socketId: string,
+    platform?: string,
+    buildId?: string,
+    systemVersion?: string,
+    deviceBrand?: string,
+    loginTimestamp?: string,
+    socketId?: string,
 }
 
 interface NormalMessage {
@@ -154,6 +154,7 @@ export class ChatGateway {
     //-----------消息中转-------------
     @SubscribeMessage('newMessage')
     async receiveNewMessage(client: Client, msg: NormalMessage) {
+        console.log(msg);
         const { type, data } = msg;
         console.log('新消息',msg);
         if(type === 'chat') {
@@ -165,12 +166,16 @@ export class ChatGateway {
 
     @SubscribeMessage('confirmReceive')
     async confirmReceiveMessage(client: Client, { messageId, userId }) {
-        return await this.chatService.confirmReceive(messageId, userId);        
+        console.log('确认收到消息', messageId, userId);
+        return await this.chatService.confirmReceive(userId, messageId);        
     }
-
+    
+    @SubscribeMessage('uploadPushToken')
+    async uploadPushToken(client: Client, { pushToken, userId }) {
+        console.log('重置token', userId, pushToken);
+        await this._setUserLoginInfo({ userId, pushToken });
+        return { status: 1 };        
+    }
     //-----------消息中转-------------
-    
-    
-   
 }
 

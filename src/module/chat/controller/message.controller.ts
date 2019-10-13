@@ -15,17 +15,25 @@ export class MessageController {
     
     @Get()
     async pullMessageList(@Body('authorization') auth) {
-        const { id: userId } = auth;
-        if(!userId) {
+        try {
+            const { id: userId } = auth;
+            if(!userId) {
+                return {
+                    status: 0,
+                }
+            }
+            const list = await this.messageService.getMsgList(userId);
+            return {
+                status: 1,
+                data: list,
+            }
+        } catch(err) {
+            console.log(err);
             return {
                 status: 0,
             }
         }
-        const list = await this.messageService.getMsgList(userId);
-        return {
-            status: 1,
-            data: list,
-        }
+        
     }
 
     @Post()

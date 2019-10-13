@@ -128,7 +128,6 @@ export class FriendService {
             console.log('已经缓存');
             return isFriend === 1 ? true : false;
         } else {
-            
             const friendList = await this.friendListModel.findOne({ userId });
             const index = friendList.friends.findIndex(friend => {
                 return Number(friend.userId) === Number(targetUserId);

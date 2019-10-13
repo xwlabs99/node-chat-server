@@ -3,10 +3,12 @@ import { AppController } from './app.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ChatModule } from './module/chat/chat.module';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
+import { PushModule } from './module/push/push.module';
 @Module({
   imports: [
     MongooseModule.forRoot('mongodb://localhost/chat'),
-    ChatModule
+    ChatModule,
+    PushModule
   ],
   controllers: [AppController],
   providers: [],

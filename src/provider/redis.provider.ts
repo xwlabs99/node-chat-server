@@ -48,6 +48,7 @@ export class Redis {
      * @param hash 对象
      */
     async HMSET(key: string, hash: object = {}, expire?: number) {
+        console.log(hash);
         const res = await WrapPromise(Redis.instance.hmset)(key, hash);
         return res === 'OK';
     }

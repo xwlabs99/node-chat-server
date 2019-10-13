@@ -16,6 +16,7 @@ import { AuthHelper } from './helper/authHelper.provider';
 import { ChatService } from './chat.service';
 import { GroupController } from './controller/group.controller';
 import { MessageController } from './controller/message.controller';
+import { PushModule } from '../push/push.module';
 
 @Module({
   imports: [
@@ -30,7 +31,9 @@ import { MessageController } from './controller/message.controller';
       { name: 'GroupList', schema: UserGroupList },
       { name: 'GroupItem', schema: UserGroupItem },
     ]),
+    PushModule,
   ],
+  exports: [ UserService ],
   controllers: [
     UserController,
     FriendController,

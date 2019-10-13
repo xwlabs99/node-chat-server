@@ -10,4 +10,13 @@ export class ChatController {
     async createUserInfo(@Body('data') body, @Body('authorization') auth) {
         console.log(auth);
     }
+
+    @Get()
+    async getChatServiceConfig(@Body('authorization') auth) {
+        return {
+            pushHost: 'http://192.168.1.104:8001',
+            chatHost: 'http://192.168.1.104:8000',
+            updateHost: 'http://47.106.153.116:3000',
+        }
+    }
 }

@@ -62,16 +62,13 @@ export class GroupController {
                     }
                 }
             } else if (groupType === 'store') {
-                const { groupMember, groupId } = data;
-                if(!groupId) {
-                    throw new Error('缺少门店ID');
-                }
+                const { groupMember } = data;
                 const groupName = '新建门店'+ new Date().getTime();
                 const initMemberIdArray = [ createrId, ...groupMember];
-                const res_createGroup = await this.groupService.createGroup(createrId, groupId, groupName, 'store');
-                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, groupId, initMemberIdArray);
+                const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, groupName, 'store');
+                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray);
                 initMemberIdArray.forEach(userId => {
-                    this.groupService.addToUserGroupList(userId, [ groupId ]);
+                    this.groupService.addToUserGroupList(userId, [ createGroupId ]);
                 })
                 console.log('创建门店聊天组状态', res_createGroup);
                 console.log('添加成员', res_addMemebersNum)
@@ -104,6 +101,9 @@ export class GroupController {
                 throw new Error('缺少必要参数');
             }
             const query = await this.groupService.getOneGroupAllInfo(groupId);
+            //if(query.group.members.findIndex(member => member.userId === queryUserId) === -1) {
+            //    throw new Error('你不在群中，无法查看信息');
+            //}
             return {
                 status: 1,
                 data: query,
@@ -140,7 +140,7 @@ export class GroupController {
         try {
             const { id: userId } = auth;
             const { ignoreAllMsg, ignoreAutoMsg, groupName, alias, announcement } = newInfo;
-            const oldInfo = await this.groupService.getOneGroupAllInfo(groupId);
+            const { group: oldInfo } = await this.groupService.getOneGroupAllInfo(groupId);
             if(groupName) {
                 oldInfo.groupName = groupName;
                 delete newInfo.groupName;
