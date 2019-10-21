@@ -75,7 +75,26 @@ export class MessageController {
     @UseInterceptors(FileInterceptor('file',{ dest: join('..', 'static/image') }))
     async uploadImage(@Req() req, @Query() query) {
         const { originalname, path } = req.file;
+        console.log(originalname);
         const err = await rename(join(path), join('..', 'static/image', originalname));
+        console.log('上传文件', req.file ,err);
+        if(err) {
+            return {
+                status: 0,
+            }
+        } else {
+            return {
+                status: 1,
+            }
+        }
+    }
+
+    @Post('file/upload')
+    @UseInterceptors(FileInterceptor('file',{ dest: join('..', 'static/file') }))
+    async uploadFile(@Req() req, @Query() query) {
+        const { originalname, path } = req.file;
+        console.log(req.file);
+        const err = await rename(join(path), join('..', 'static/file', originalname));
         console.log('上传文件', req.file ,err);
         if(err) {
             return {

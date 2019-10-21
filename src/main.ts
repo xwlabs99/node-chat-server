@@ -10,7 +10,7 @@ async function bootstrap() {
   );
   app.use('/static', serveStatic(join(__dirname, '../../static'), {
     maxAge: '1d',
-    extensions: ['jpg', 'jpeg', 'png', 'gif', 'aac'],
+    extensions: ['jpg', 'jpeg', 'png', 'gif', 'aac', '*'],
    }));
   /*
   app.useGlobalFilters(

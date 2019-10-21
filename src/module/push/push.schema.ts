@@ -11,7 +11,7 @@ export interface PushUser extends Document{
 }
 
 export const PushUserSchema = new mongoose.Schema({
-    socketId: { type: String, required: true, default: '' },
+    socketId: { type: String, default: '' },
     extraPushType: { type: String, default: '' },
     extraPushToken: { type: String, default: '' },
 });

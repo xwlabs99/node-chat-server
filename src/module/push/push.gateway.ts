@@ -57,43 +57,10 @@ export class PushGateway {
         });
     }
 
-    @SubscribeMessage('confirmConnect')
+    @SubscribeMessage('onConnect')
     async confirmConnect(client: Client, data: PushConnect) {
-        console.log(data);
-        try {
-            const { pushToken, socketId, extraPushToken, extraPushType } = data;
-            console.log(socketId);
-            if(pushToken && pushToken.length !== 0) {
-                const findPushUser = await this.pushUserModel.findByIdAndUpdate(pushToken, { socketId, extraPushToken, extraPushType }, { upsert: true }).exec();
-                if(findPushUser) {
-                    console.log('该token已经存在');
-                    return { pushToken: findPushUser._id } 
-                } else {
-                    console.log('创建新用户');
-                    const pushUser = new this.pushUserModel({ 
-                        socketId: client.id, 
-                        extraPushToken: extraPushToken, 
-                        extraPushType: extraPushType,
-                     });
-                    const newPushUser = await pushUser.save();
-                     
-                }
-            } else {
-                console.log('创建新用户');
-                const pushUser = new this.pushUserModel({ 
-                    socketId: client.id, 
-                    extraPushToken: extraPushToken, 
-                    extraPushType: extraPushType,
-                 });
-                const newPushUser = await pushUser.save();
-                return {
-                    pushToken: newPushUser._id,
-                } 
-            } 
-        } catch(err) {
-            console.log(err);
-        }
-        
+        const { pushToken, extraPushToken, extraPushType, socketId } = data;
+       
     }
 
 }
