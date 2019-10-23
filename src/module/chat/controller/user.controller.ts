@@ -19,6 +19,14 @@ export class UserController {
         private readonly redis: Redis,
     ){}
 
+    @Get('user/logout/:id')
+    async userLogout(@Param() userId) {
+        this.userService.userLogout(Number(userId));
+        return {
+            status: 1,
+        }
+    }
+
     @Post('user/info')
     async createUserInfo(@Body() body) {
         const userInfo = body;

@@ -7,7 +7,7 @@ import { GroupService } from './service/group.service';
 import { FriendService } from './service/friend.service';
 import { Message } from './interface/model.interface';
 import { PushGateway } from '../push/push.gateway';
-
+const reg = new RegExp('\\/\\{[a-zA-Z_]{1,14}\\}', 'g');
 interface sendOptions {
     checkPermission? : boolean 
 }
@@ -33,6 +33,27 @@ export class ChatService {
         console.log("初始化用户信息");
         return await this.userService.createUser({ userId, name, avatar: '' });
     }
+    
+    getMessageContent (msg: any): string {
+        const { messageType, content } = msg;
+        switch(messageType){
+            case 'voice':
+                return '[语音]';
+            case 'image':
+                return '[图片]';
+            case 'order':
+                return '[订单]';
+            case 'file':
+                return '[文件]';
+            case 'system':
+                return JSON.parse(content).text;
+            case 'text':
+                return content.replace(reg, '[表情]');
+            default:
+                return content
+        }
+    }
+
 
     private async _getClient(userId: number): Promise<{ client: Socket, pushToken: string }> {
         const { socketId, pushToken }: any  = await this.userService.getRedisUserInfo(userId, [ 'socketId', 'pushToken' ]);
@@ -46,7 +67,7 @@ export class ChatService {
         return await this.messageService.removeMsgs(userId, [ messageId ]);
     }
 
-    async processChatTypeMsg(msg: Message) {
+    async processChatTypeMsg(msg: Message | any) {
         try {
             const { groupId, userId } = msg;
             const res = await this.sendMessageToGroup(userId, groupId, msg);
@@ -68,11 +89,11 @@ export class ChatService {
         }
     }
 
-    async sendMessageToGroup(senderId: number, groupId: string, msg, options?: sendOptions) {
+    async sendMessageToGroup(senderId: number, groupId: string, msg: Message | any, options?: sendOptions) {
         try {
             const { checkPermission = true } = options || {};
             // 这里加缓存优化
-            const { members, groupType } = await this.groupService.getOneGroupAllMemberInfo(groupId);
+            let { members, groupType, groupName } = await this.groupService.getOneGroupAllMemberInfo(groupId);
             const receivers = members.filter(member => member.userId !== senderId);
             // 检验好友关系或者群成员关系
             if(checkPermission) {
@@ -84,6 +105,7 @@ export class ChatService {
                             status: -1,
                         }
                     }
+                    groupName = receivers[0].alias;
                 } else {
                     if(receivers.length === members.length) {
                         return {
@@ -92,12 +114,12 @@ export class ChatService {
                     }
                 }
             }
-           
+
             const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
                 return this.sendMessageToClient(receiver.userId, msg);
             }))).filter(pushToken => pushToken);
-            // this.pushService.sendPushToMuilt(pushTargets, '123', '123');
 
+            this.pushService.sendPushToMuilt(pushTargets, groupName, this.getMessageContent(msg));
             return {
                 status: 1,
             }

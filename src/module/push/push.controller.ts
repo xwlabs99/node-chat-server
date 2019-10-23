@@ -36,4 +36,25 @@ export class PushController {
             console.log(err);
         }
     }
+
+    @Put('token')
+    async updateInfo(@Body('data') info) {
+        try {
+            const { extraPushType, extraPushToken, pushToken } = info;
+            console.log("1234", info);
+            if(pushToken && pushToken.length !== 0) {
+                const findPushUser = await this.pushUserModel.findById(pushToken).exec();
+                if(findPushUser) {
+                    findPushUser.extraPushToken = extraPushToken;
+                    findPushUser.extraPushType = extraPushType;
+                    findPushUser.save()
+                    return { pushToken: findPushUser._id } 
+                } else {
+                    return { pushToken: null }
+                }
+            }
+        } catch(err) {
+            console.log(err);
+        }
+    }
 }

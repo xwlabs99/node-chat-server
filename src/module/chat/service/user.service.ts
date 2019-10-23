@@ -86,4 +86,7 @@ export class UserService {
         return result;
     }
  
+    async userLogout(userId) {
+        return await this.redis.DEL(this.redisHelper.WithRedisNameSpace(`USER:${userId}`));
+    }
 }
