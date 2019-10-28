@@ -10,6 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Redis } from '../../provider/redis.provider';
 import { isString } from 'util';
+import { pushConfig } from './config';
 const Xiaomi = require('push-xiaomi');
 const Huawei = require('push-huawei');
 const APNs = require('./lib/push-ios.js');
@@ -35,21 +36,13 @@ export class PushGateway {
         private readonly redis: Redis,
     ){
         this.XiaomiPushClient = new Xiaomi({
-            appId: '2882303761518040120',
-            appSecret: 'x/R1mbG/TtXlgbAmTpE8VA==',
-            appPkgName: 'com.swiftbarbird',
+            ...pushConfig.xiaomi
         });
         this.HuaweiPushClient = new Huawei({
-            appId: '100874921',
-            appSecret: '8effb3f4934b550b0d7a637cd5c323ab0a222ffa18e7c558d72577ba3bc57088',
-            appPkgName: 'com.swiftbarbird',
+            ...pushConfig.huawei
         });
         this.APNsPushClient = new APNs({
-            cert: __dirname + '/cert_dev.pem',
-            key: __dirname + '/key_dev.pem',
-            passphrase: 'weixiang1999', // pem证书密码
-            production: false,  // 是否生产环境
-            topic: 'com.util.bailingbird'
+            ...pushConfig.apns
         });
     }
 

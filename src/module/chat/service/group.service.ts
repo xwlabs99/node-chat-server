@@ -34,6 +34,15 @@ export class GroupService implements OnModuleInit {
                     }) 
                 });
             });  
+            await this.createGroup(1, 'groupHelper', '群助手', 'system').then(() => {
+                this.updateGroupInfo('groupHelper', {
+                    avatar: JSON.stringify({
+                        name: 'md-people',
+                        type: 'ionicon',
+                        color: '#FFCC33',
+                    }) 
+                });
+            });  
         } catch(err) {
             return;
         }

@@ -26,7 +26,7 @@ export class ChatService {
         @Inject(forwardRef(() => GroupService))
         private readonly groupService: GroupService,
         private readonly friendService: FriendService,
-        private readonly pushService: PushGateway
+        private readonly pushService: PushGateway,
     ){}
     
     async initUserInfo(userId: number, name: string) {
@@ -36,6 +36,7 @@ export class ChatService {
     
     getMessageContent (msg: any): string {
         const { messageType, content } = msg;
+        console.log(msg);
         switch(messageType){
             case 'voice':
                 return '[语音]';
@@ -46,14 +47,13 @@ export class ChatService {
             case 'file':
                 return '[文件]';
             case 'system':
-                return JSON.parse(content).text;
+                return content.text;
             case 'text':
                 return content.replace(reg, '[表情]');
             default:
-                return content
+                return content;
         }
     }
-
 
     private async _getClient(userId: number): Promise<{ client: Socket, pushToken: string }> {
         const { socketId, pushToken }: any  = await this.userService.getRedisUserInfo(userId, [ 'socketId', 'pushToken' ]);
@@ -92,9 +92,19 @@ export class ChatService {
     async sendMessageToGroup(senderId: number, groupId: string, msg: Message | any, options?: sendOptions) {
         try {
             const { checkPermission = true } = options || {};
+            let msgContent = this.getMessageContent(msg);
             // 这里加缓存优化
             let { members, groupType, groupName } = await this.groupService.getOneGroupAllMemberInfo(groupId);
-            const receivers = members.filter(member => member.userId !== senderId);
+            console.log(members);
+            let senderInfo;
+            const receivers = members.filter(member => {
+                if(member.userId !== senderId) {
+                    return true;
+                } else {
+                    senderInfo = member;
+                    return false;
+                }
+            })
             // 检验好友关系或者群成员关系
             if(checkPermission) {
                 if(groupType === 'friend') {
@@ -105,21 +115,30 @@ export class ChatService {
                             status: -1,
                         }
                     }
-                    groupName = receivers[0].alias;
+                    groupName = senderInfo.alias;
                 } else {
                     if(receivers.length === members.length) {
                         return {
                             status: -2,
                         }
                     }
+                    msgContent = `${senderInfo.alias}:${msgContent}`;
                 }
             }
 
+            const isAutoMsg = msgContent.includes('[自动消息]');
             const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
-                return this.sendMessageToClient(receiver.userId, msg);
+                const pushToken = await this.sendMessageToClient(receiver.userId, msg);
+                if(receiver.ignoreAllMsg) {
+                    return null;
+                } else if(isAutoMsg && receiver.ignoreAutoMsg) {
+                    return null;
+                } else {
+                    return pushToken;
+                }
             }))).filter(pushToken => pushToken);
 
-            this.pushService.sendPushToMuilt(pushTargets, groupName, this.getMessageContent(msg));
+            this.pushService.sendPushToMuilt(pushTargets, groupName, msgContent);
             return {
                 status: 1,
             }
