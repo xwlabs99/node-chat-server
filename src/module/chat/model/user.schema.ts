@@ -45,7 +45,6 @@ export const UserFriendList = new mongoose.Schema({
     userId: {
         type: Number,
         index: true,
-        unique: true,
         sparse: true,
     },
     friends: [Friend],
