@@ -48,9 +48,6 @@ export class PushController {
                 if(findPushUser) {
                     findPushUser.extraPushToken = extraPushToken;
                     findPushUser.extraPushType = extraPushType;
-                    if(extraPushType !== 'ios') {
-                        this.pushService.offlinePush(extraPushType, [ extraPushToken ], '提示', '欢迎使用百灵鸟');
-                    }
                     findPushUser.save();
                     return { pushToken: findPushUser._id };
                 } else {
