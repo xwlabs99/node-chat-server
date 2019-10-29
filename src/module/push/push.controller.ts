@@ -48,9 +48,11 @@ export class PushController {
                 if(findPushUser) {
                     findPushUser.extraPushToken = extraPushToken;
                     findPushUser.extraPushType = extraPushType;
-                    this.pushService.offlinePush(extraPushType, [ extraPushToken ], '提示', '欢迎使用百灵鸟');
-                    findPushUser.save()
-                    return { pushToken: findPushUser._id } 
+                    if(extraPushType !== 'ios') {
+                        this.pushService.offlinePush(extraPushType, [ extraPushToken ], '提示', '欢迎使用百灵鸟');
+                    }
+                    findPushUser.save();
+                    return { pushToken: findPushUser._id };
                 } else {
                     // 用来更新id的
                     console.log('创建新用户');
