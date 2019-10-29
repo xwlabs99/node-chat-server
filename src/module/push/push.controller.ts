@@ -2,12 +2,14 @@ import { Injectable, Controller, Get, Post, Put, Delete, Body, Param, Query } fr
 import { PushUser } from './push.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { PushGateway } from './push.gateway';
 
 
 @Controller('push')
 export class PushController {
     constructor(
         @InjectModel('PushUser') private readonly pushUserModel: Model<PushUser>,
+        private readonly pushService: PushGateway
     ){}
 
 
@@ -46,9 +48,11 @@ export class PushController {
                 if(findPushUser) {
                     findPushUser.extraPushToken = extraPushToken;
                     findPushUser.extraPushType = extraPushType;
+                    this.pushService.offlinePush(extraPushType, [ extraPushToken ], '提示', '欢迎使用百灵鸟');
                     findPushUser.save()
                     return { pushToken: findPushUser._id } 
                 } else {
+                    // 用来更新id的
                     console.log('创建新用户');
                     const pushUser = new this.pushUserModel({});
                     const newPushUser = await pushUser.save();  
