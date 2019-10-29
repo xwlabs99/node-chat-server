@@ -11,9 +11,10 @@ import { Model } from 'mongoose';
 import { Redis } from '../../provider/redis.provider';
 import { isString } from 'util';
 import { pushConfig } from './config';
+import APNs from './lib/push-ios.js';
 const Xiaomi = require('push-xiaomi');
 const Huawei = require('push-huawei');
-const APNs = require('./lib/push-ios.js');
+
 
 interface PushConnect {
     extraPushType: string,

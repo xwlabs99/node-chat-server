@@ -1,8 +1,9 @@
 const apn = require('apn');
 const _ = require('lodash');
 
-class IOS {
-  constructor(options = {}) {
+export default class IOS {
+  options;
+  constructor(options: any = {}) {
     options.maxLength = options.maxLength || 100;
     this.options = options;
     if (!options.cert) throw new Error('IOS Cert 不能为空');
@@ -87,5 +88,3 @@ class IOS {
     }
   }
 }
-
-module.exports = IOS;
