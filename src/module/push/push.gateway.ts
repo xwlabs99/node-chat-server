@@ -135,7 +135,7 @@ export class PushGateway {
     async onConnect(client: Client, data: PushConnect) {
         const { pushToken, extraPushToken, extraPushType, socketId } = data;
         const findUser = await this.pushUserModel.findById(pushToken).exec();
-        if(extraPushType !== 'ios' && findUser.extraPushToken !== extraPushToken) {
+        if(extraPushType !== 'ios' && findUser.extraPushType !== extraPushType) {
             this.offlinePush(extraPushType, [ extraPushToken ], '提示', '成功注册推送服务');
         }
         findUser.extraPushToken = extraPushToken;

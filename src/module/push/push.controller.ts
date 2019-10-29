@@ -45,10 +45,13 @@ export class PushController {
             const { extraPushType, extraPushToken, pushToken } = info;
             if(pushToken && pushToken.length !== 0) {
                 const findPushUser = await this.pushUserModel.findById(pushToken).exec();
+                // ios用来更新token
                 if(findPushUser) {
-                    findPushUser.extraPushToken = extraPushToken;
-                    findPushUser.extraPushType = extraPushType;
-                    findPushUser.save();
+                    if(extraPushToken && extraPushType) {
+                        findPushUser.extraPushToken = extraPushToken;
+                        findPushUser.extraPushType = extraPushType;
+                        findPushUser.save();
+                    }
                     return { pushToken: findPushUser._id };
                 } else {
                     // 用来更新id的
