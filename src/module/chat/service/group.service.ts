@@ -112,7 +112,7 @@ export class GroupService implements OnModuleInit {
      * @param key 键名
      * @returns 返回集合新增成员数
      */
-    async addGroupMember(operaterId: number, groupId: string, memberIds: number[], options?: { shouldSend: boolean }): Promise<GroupMember[]> {
+    async addGroupMember(operaterId: number, groupId: string, memberIds: number[], options: { shouldSend: boolean }): Promise<GroupMember[]> {
         try {
             const group = await this.groupModel.findOne({ groupId }).exec();
             let operaterInfo: any = group.members.find(member => member.userId === operaterId);

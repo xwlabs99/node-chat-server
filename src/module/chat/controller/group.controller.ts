@@ -179,7 +179,7 @@ export class GroupController {
             const { id: operaterId } = auth;
             console.log(gid, body);
             if(isAdd) {
-                const res = await this.groupService.addGroupMember(operaterId, gid ,members);
+                const res = await this.groupService.addGroupMember(operaterId, gid ,members, { shouldSend: true });
                 members.forEach(uid => {
                     this.groupService.addToUserGroupList(uid, [ gid ]);
                 })
