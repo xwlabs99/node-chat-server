@@ -27,7 +27,6 @@ export const Friend = new mongoose.Schema({
     userId: {
         type: Number,
         required: true,
-        unique: true,
         sparse: true,
     },
     alias: String,
@@ -45,6 +44,7 @@ export const UserFriendList = new mongoose.Schema({
     userId: {
         type: Number,
         index: true,
+        unique: true,
         sparse: true,
     },
     friends: [Friend],
