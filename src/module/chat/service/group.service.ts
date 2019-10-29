@@ -112,7 +112,7 @@ export class GroupService implements OnModuleInit {
      * @param key 键名
      * @returns 返回集合新增成员数
      */
-    async addGroupMember(operaterId: number, groupId: string, memberIds: number[]): Promise<GroupMember[]> {
+    async addGroupMember(operaterId: number, groupId: string, memberIds: number[], options?: { shouldSend: boolean }): Promise<GroupMember[]> {
         try {
             const group = await this.groupModel.findOne({ groupId }).exec();
             let operaterInfo: any = group.members.find(member => member.userId === operaterId);
@@ -144,7 +144,7 @@ export class GroupService implements OnModuleInit {
                 group.members = group.members.concat(newMembers);
                 const save = await group.save();
 
-                this.chatService.sendSystemMessageToGroup(
+                options.shouldSend && this.chatService.sendSystemMessageToGroup(
                     groupId, 
                     `${operaterInfo.alias}邀请了 ${newMembersName.join(',')} 进入该群`,
                     { type: 'normal' }

@@ -41,7 +41,6 @@ export class PushController {
     async updateInfo(@Body('data') info) {
         try {
             const { extraPushType, extraPushToken, pushToken } = info;
-            console.log("1234", info);
             if(pushToken && pushToken.length !== 0) {
                 const findPushUser = await this.pushUserModel.findById(pushToken).exec();
                 if(findPushUser) {
@@ -50,7 +49,10 @@ export class PushController {
                     findPushUser.save()
                     return { pushToken: findPushUser._id } 
                 } else {
-                    return { pushToken: null }
+                    console.log('创建新用户');
+                    const pushUser = new this.pushUserModel({});
+                    const newPushUser = await pushUser.save();  
+                    return { pushToken: newPushUser._id };
                 }
             }
         } catch(err) {

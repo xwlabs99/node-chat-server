@@ -29,7 +29,7 @@ export class GroupController {
                     }
                 }
                 const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, createGroupId, 'friend');
-                const groupMembersInfo = await this.groupService.addGroupMember(createrId, createGroupId, [ createrId, toId ]);
+                const groupMembersInfo = await this.groupService.addGroupMember(createrId, createGroupId, [ createrId, toId ], { shouldSend: false });
                 console.log('创建聊天组状态', res_createGroup);
                 console.log('添加成员', groupMembersInfo);
                 if(res_createGroup){
@@ -45,7 +45,7 @@ export class GroupController {
                 const initMemberIdArray = [ createrId, ...groupMember ];
                 const groupName = '群聊' + createGroupId;
                 const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, groupName, 'group');
-                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray);
+                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray, { shouldSend: true });
                 initMemberIdArray.forEach(userId => {
                     this.groupService.addToUserGroupList(userId, [ createGroupId ]);
                 })
@@ -66,7 +66,7 @@ export class GroupController {
                 const groupName = '新建门店'+ new Date().getTime();
                 const initMemberIdArray = [ createrId, ...groupMember];
                 const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, groupName, 'store');
-                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray);
+                const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray, { shouldSend: true });
                 initMemberIdArray.forEach(userId => {
                     this.groupService.addToUserGroupList(userId, [ createGroupId ]);
                 })
