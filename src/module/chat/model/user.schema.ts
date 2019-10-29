@@ -27,7 +27,6 @@ export const Friend = new mongoose.Schema({
     userId: {
         type: Number,
         required: true,
-        sparse: true,
     },
     alias: String,
 });

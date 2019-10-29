@@ -9,6 +9,7 @@ import { Redis } from '../../provider/redis.provider';
 import { AuthHelper } from './helper/authHelper.provider';
 import { RedisHelper } from './helper/redisHelper.provider';
 import { ChatService } from './chat.service';
+import { UserService } from './service/user.service';
 
 interface onConnect {
     userId: number,
@@ -39,6 +40,7 @@ export class ChatGateway {
         private readonly chatService: ChatService,
         private readonly authHelper: AuthHelper,
         private readonly redisHelper: RedisHelper,
+        private readonly userServie: UserService,
         private readonly redis: Redis,
     ){}
 
@@ -54,11 +56,17 @@ export class ChatGateway {
         const auth: any = await this.authHelper.JWTverify(authToken);
         // console.log(auth, userId);
         if(auth && auth.id === userId) {
+            const findUser = await this.userServie.getOneUserInfo(userId);
+            if(!findUser) {
+                console.log('创建新用户');
+                await this.chatService.initUserInfo(userId, name);
+            }
+
             const connectInfo: any = await this._getUserLoginInfo(userId);
             // 第一次登录
             if(!connectInfo) {
                 console.log('第一次登录');
-                await this.chatService.initUserInfo(userId, name);
+              
                 const loginTimestamp = String(new Date().getTime());
                 await this._setUserLoginInfo({...data, socketId, loginTimestamp });
                 return {

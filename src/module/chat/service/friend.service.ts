@@ -47,7 +47,7 @@ export class FriendService {
             const targetNewFriendItem = new this.friendModel({ userId: userId });
             myFriendList.friends.push(myNewFriendItem);
             targetFriendList.friends.push(targetNewFriendItem);
-            await this.redis.DEL(this._getIsFriendKey(userId, targetUserId));
+            this.redis.DEL(this._getIsFriendKey(userId, targetUserId));
             const [ res, res1 ] = await Promise.all([
                 myFriendList.save(),
                 targetFriendList.save(),
@@ -75,9 +75,14 @@ export class FriendService {
                     },
                 }
             } else {
+                const newListModel = new this.friendListModel({ userId: userId });
+                const list = newListModel.save();
                 return {
-                    status: 0,
-                    message: '没有找到对应的列表',
+                    status: 1,
+                    data: {
+                        list: [],
+                        userInfo: [],
+                    },
                 }
             }
         } catch(err) {

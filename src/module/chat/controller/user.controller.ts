@@ -20,7 +20,7 @@ export class UserController {
     ){}
 
     @Get('user/logout/:id')
-    async userLogout(@Param() userId) {
+    async userLogout(@Param('id') userId) {
         this.userService.userLogout(Number(userId));
         return {
             status: 1,

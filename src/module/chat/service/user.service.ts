@@ -49,10 +49,16 @@ export class UserService {
 
 
     async getRedisUserInfo(userId: number, fields: string[]) {
-        return await this.redis.HMGET(
-            this.redisHelper.WithRedisNameSpace(`USER:${userId}`), 
-            fields
-        );
+        const key = this.redisHelper.WithRedisNameSpace(`USER:${userId}`)
+        if(await this.redis.EXISTS(key)) {
+            return await this.redis.HMGET(
+                key, 
+                fields
+            );
+        } else {
+            return null;
+        }
+        
     }
     
     async updateUser(userId: number, userInfo: User | object): Promise<User> {
@@ -80,9 +86,6 @@ export class UserService {
 
     async getOneUserInfo(userId: number, fields? : string[]): Promise<User> {
         const result: User = await this.userModel.findOne({ userId }, fields).exec();
-        if(!result) {
-            throw new Error('找不到用户');
-        }
         return result;
     }
  

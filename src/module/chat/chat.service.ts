@@ -30,7 +30,6 @@ export class ChatService {
     ){}
     
     async initUserInfo(userId: number, name: string) {
-        console.log("初始化用户信息");
         return await this.userService.createUser({ userId, name, avatar: '' });
     }
     
@@ -56,11 +55,19 @@ export class ChatService {
     }
 
     private async _getClient(userId: number): Promise<{ client: Socket, pushToken: string }> {
-        const { socketId, pushToken }: any  = await this.userService.getRedisUserInfo(userId, [ 'socketId', 'pushToken' ]);
-        return { 
-            client: this.server.sockets.sockets[socketId],
-            pushToken,
-        };
+        const userInfo = await this.userService.getRedisUserInfo(userId, [ 'socketId', 'pushToken' ]);
+        if(userInfo) {
+            const { socketId, pushToken }: any = userInfo;
+            return { 
+                client: this.server.sockets.sockets[socketId],
+                pushToken,
+            };
+        } else {
+            return {
+                client: null,
+                pushToken: null
+            };
+        }
     }
 
     async confirmReceive(userId: number, messageId: string) {
@@ -83,9 +90,9 @@ export class ChatService {
         this.messageService.addToMsgList(userId, msg);
         if(client) {
             client.emit('newMessage', msg);
-            return undefined;
+            return null;
         } else {
-            return pushToken;
+            return pushToken; // pushtoken为null则说明不在线
         }
     }
 
