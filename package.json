@@ -33,6 +33,7 @@
     "moment": "^2.24.0",
     "mongoose": "^5.7.1",
     "push-huawei": "^0.1.7",
+    "push-umeng": "^0.2.1",
     "push-xiaomi": "^0.1.6",
     "redis": "^2.8.0",
     "reflect-metadata": "^0.1.12",

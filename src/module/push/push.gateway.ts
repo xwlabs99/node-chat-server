@@ -14,7 +14,7 @@ import { pushConfig } from './config';
 import APNs from './lib/push-ios.js';
 const Xiaomi = require('push-xiaomi');
 const Huawei = require('push-huawei');
-
+const UMeng = require('push-umeng');
 
 interface PushConnect {
     extraPushType: string,
@@ -31,7 +31,7 @@ export class PushGateway {
     XiaomiPushClient;
     HuaweiPushClient;
     APNsPushClient;
-
+    UmengPushClient;
     constructor(
         @InjectModel('PushUser') private readonly pushUserModel: Model<PushUser>,
         private readonly redis: Redis,
@@ -44,6 +44,9 @@ export class PushGateway {
         });
         this.APNsPushClient = new APNs({
             ...pushConfig.apns
+        });
+        this.UmengPushClient = new UMeng({
+            
         });
     }
 
@@ -96,6 +99,15 @@ export class PushGateway {
                   // 所有请求完成回调
                 }
             });
+        } else if(type === 'UMengPush') {
+             // 文件推送
+            this.UmengPushClient.push({
+                title: title,
+                content: content,
+                list: tokens, 
+                success(response){}, // 成功回调
+                fail(error){} // 失败回调
+          });
         }
         
     }
