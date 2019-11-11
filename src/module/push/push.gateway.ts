@@ -121,6 +121,7 @@ export class PushGateway {
         const MiPush = [];
         const HuaweiPush = [];
         const ApnsPush = [];
+        const UmengPush = [];
         pushTargetInfos.forEach(pushTarget => {
             if(pushTarget.extraPushType === 'ios') {
                 ApnsPush.push(pushTarget.extraPushToken);
@@ -134,6 +135,8 @@ export class PushGateway {
                     MiPush.push(pushTarget.extraPushToken);
                 } else if(pushTarget.extraPushType === 'HuaweiPush') {
                     HuaweiPush.push(pushTarget.extraPushToken);
+                } else if(pushTarget.extraPushType === 'UMengPush') {
+                    UmengPush.push(pushTarget.extraPushToken);
                 }
                 console.log('调用第三方推送')
             }
@@ -141,6 +144,7 @@ export class PushGateway {
         this.offlinePush('MIPush', MiPush, title, content);
         this.offlinePush('HuaweiPush', HuaweiPush, title, content);
         this.offlinePush('ios', ApnsPush, title, content);
+        this.offlinePush('UMengPush', UmengPush, title, content);
     }
 
     @SubscribeMessage('onConnect')
