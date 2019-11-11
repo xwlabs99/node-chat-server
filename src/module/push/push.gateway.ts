@@ -46,7 +46,7 @@ export class PushGateway {
             ...pushConfig.apns
         });
         this.UmengPushClient = new UMeng({
-            
+            ...pushConfig.umeng
         });
     }
 
