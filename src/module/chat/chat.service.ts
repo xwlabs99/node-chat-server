@@ -100,6 +100,8 @@ export class ChatService {
         try {
             const { checkPermission = true } = options || {};
             let msgContent = this.getMessageContent(msg);
+
+
             // 这里加缓存优化
             let { members, groupType, groupName } = await this.groupService.getOneGroupAllMemberInfo(groupId);
             console.log(members);
@@ -111,7 +113,9 @@ export class ChatService {
                     senderInfo = member;
                     return false;
                 }
-            })
+            });
+
+
             // 检验好友关系或者群成员关系
             if(checkPermission) {
                 if(groupType === 'friend') {
@@ -133,19 +137,28 @@ export class ChatService {
                 }
             }
 
-            const isAutoMsg = msgContent.includes('[自动消息]');
+            const isAutoMsg = msg.messageType === 'text' && msgContent.includes('[自动消息]');
+            let forcePushUser = [];
+            if(msg.messageType === 'text') {
+                forcePushUser = (msg.content.match(/@[^\s]+\s*/g)|| []).map(s => s.replace(/[@\s]/g, '')) ;
+            }
+
             const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
-                const pushToken = await this.sendMessageToClient(receiver.userId, msg);
-                if(receiver.ignoreAllMsg) {
+                const forcePush = forcePushUser.includes(receiver.alias);
+                const pushToken = await this.sendMessageToClient(receiver.userId, Object.assign(msg, { atMe: forcePush }));
+                if(forcePush) {
+                    return { pushToken };
+                } else if(receiver.ignoreAllMsg) {
                     return null;
                 } else if(isAutoMsg && receiver.ignoreAutoMsg) {
                     return null;
                 } else {
                     return pushToken;
                 }
-            }))).filter(pushToken => pushToken);
+            }))).filter(pushTarget => pushTarget);
+            this.pushService.sendPushToMuilt(pushTargets, groupName, msgContent, '[有人@我]');
 
-            this.pushService.sendPushToMuilt(pushTargets, groupName, msgContent);
+
             return {
                 status: 1,
             }
@@ -183,7 +196,7 @@ export class ChatService {
             payload = { type: 'normal' };
         }
         const userId = 0;
-        const newSendSystemMessage = {
+        const newSendSystemMessage: any = {
             messageId: `${groupId}:${userId}:${new Date().getTime()}`,
             messageType: 'system',
             userId,
@@ -196,7 +209,15 @@ export class ChatService {
             },
             sendStatus: 1,
         };
-        this.sendMessageToClient(targetUserId, newSendSystemMessage);
+
+        const { client, pushToken } = await this._getClient(userId);
+        this.messageService.addToMsgList(targetUserId, newSendSystemMessage);
+        if(client) {
+            client.emit('newMessage', newSendSystemMessage);
+            return null;
+        } else {
+            this.pushService.sendPushToOne(pushToken, '新的好友', content);
+        }
     }
 
     async processExtraTypeMsg(msg) {

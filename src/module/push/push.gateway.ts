@@ -113,18 +113,36 @@ export class PushGateway {
     }
 
 
-    async sendPushToMuilt(pushIds: string[], title: string, content: string) {
-        const pushTargetInfos = await this.pushUserModel.find({
-            _id: pushIds,
-        }).exec();
-        console.log('准备推送', pushIds, pushTargetInfos);
+    async sendPushToMuilt(pushTargets: (string|{ pushToken: string })[], title: string, content: string, extra?: string) {
+        const atUsers = [];
+        const pushIds = pushTargets.filter(p => {
+            if(typeof p === 'object') {
+                atUsers.push(p.pushToken);
+                return false;
+            } else {
+                return true;
+            }
+        })
+
+        const pushTargetInfos: any = await Promise.all([
+            this.pushUserModel.find({ _id: pushIds }).exec(),
+            (atUsers.length !== 0 ? this.pushUserModel.find({ _id: atUsers }).exec() : []),
+        ]);
+        console.log(atUsers, pushIds);
+        pushIds.length !== 0 &&this._processTarget(pushTargetInfos[0], title, content);
+        atUsers.length !== 0 && this._processTarget(pushTargetInfos[1], title, extra + content);
+    }
+
+    _processTarget(targets, title, content) {
+        // console.log('准备推送', pushIds, pushTargetInfos);
         const MiPush = [];
         const HuaweiPush = [];
         const ApnsPush = [];
         const UmengPush = [];
-        pushTargetInfos.forEach(pushTarget => {
+        targets.forEach(pushTarget => {
+            const info = pushTarget.extraPushToken;
             if(pushTarget.extraPushType === 'ios') {
-                ApnsPush.push(pushTarget.extraPushToken);
+                ApnsPush.push(info);
                 return true;
             }
             const client = this._getClient(pushTarget.socketId);
@@ -132,11 +150,11 @@ export class PushGateway {
                 client.emit('newMessage', { title, content });
             } else {
                 if(pushTarget.extraPushType === 'MIPush') {
-                    MiPush.push(pushTarget.extraPushToken);
+                    MiPush.push(info);
                 } else if(pushTarget.extraPushType === 'HuaweiPush') {
-                    HuaweiPush.push(pushTarget.extraPushToken);
+                    HuaweiPush.push(info);
                 } else if(pushTarget.extraPushType === 'UMengPush') {
-                    UmengPush.push(pushTarget.extraPushToken);
+                    UmengPush.push(info);
                 }
                 console.log('调用第三方推送')
             }
