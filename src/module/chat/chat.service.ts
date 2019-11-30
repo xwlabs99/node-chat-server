@@ -141,11 +141,13 @@ export class ChatService {
             let forcePushUser = [];
             if(msg.messageType === 'text') {
                 forcePushUser = (msg.content.match(/@[^\s]+\s*/g)|| []).map(s => s.replace(/[@\s]/g, '')) ;
+                // console.log(forcePushUser);
             }
 
             const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
                 const forcePush = forcePushUser.includes(receiver.alias);
-                const pushToken = await this.sendMessageToClient(receiver.userId, Object.assign(msg, { atMe: forcePush }));
+                // console.log(receiver.alias, forcePush);
+                const pushToken = await this.sendMessageToClient(receiver.userId, { ...msg, atMe: forcePush });
                 if(forcePush) {
                     return { pushToken };
                 } else if(receiver.ignoreAllMsg) {
@@ -156,6 +158,7 @@ export class ChatService {
                     return pushToken;
                 }
             }))).filter(pushTarget => pushTarget);
+
             this.pushService.sendPushToMuilt(pushTargets, groupName, msgContent, '[有人@我]');
 
 
