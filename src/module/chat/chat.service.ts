@@ -7,6 +7,7 @@ import { GroupService } from './service/group.service';
 import { FriendService } from './service/friend.service';
 import { Message } from './interface/model.interface';
 import { PushGateway } from '../push/push.gateway';
+import { Redis } from '../../provider/redis.provider';
 const reg = new RegExp('\\/\\{[a-zA-Z_]{1,14}\\}', 'g');
 interface sendOptions {
     checkPermission? : boolean 
@@ -27,6 +28,7 @@ export class ChatService {
         private readonly groupService: GroupService,
         private readonly friendService: FriendService,
         private readonly pushService: PushGateway,
+        private readonly redis: Redis,
     ){}
     
     async initUserInfo(userId: number, name: string) {
@@ -76,9 +78,15 @@ export class ChatService {
 
     async processChatTypeMsg(msg: Message | any) {
         try {
-            const { groupId, userId } = msg;
-            const res = await this.sendMessageToGroup(userId, groupId, msg);
-            return res;
+            const { groupId, userId, messageId } = msg;
+            if(await this.redis.EXISTS(`msg:${messageId}`)) {
+                return { status: 1 }
+            } else {
+                await this.redis.SET(`msg:${messageId}`, 1, 8);
+                const res = await this.sendMessageToGroup(userId, groupId, msg);
+                return res;
+            }
+            
                 
         } catch(err) {
             return { status: 0 }

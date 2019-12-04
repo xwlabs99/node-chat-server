@@ -1,4 +1,4 @@
-import { Injectable, HttpException } from '@nestjs/common';
+import { Injectable, HttpException, OnModuleInit } from '@nestjs/common';
 import { User, UserFriendList, UserGroupList } from '../interface/model.interface';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -7,7 +7,7 @@ import { Redis } from '../../../provider/redis.provider';
 import { RedisHelper } from '../helper/redisHelper.provider';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
     constructor(
         @InjectModel('User') private readonly userModel: Model<User>,
         @InjectModel('FriendList') private readonly friendListModel: Model<UserFriendList>,
@@ -15,7 +15,35 @@ export class UserService {
         private readonly redisHelper: RedisHelper,
         private readonly redis: Redis,
     ){}
-    
+
+    async onModuleInit() {
+        const addSystemUser = async (userId, name, avatar) => {
+            const u = await this.userModel.findOneAndUpdate({ userId }, {
+                name, avatar: JSON.stringify(avatar)
+            }).exec();
+            if(u) {
+                return;
+            } else {
+                const newUser = new this.userModel({
+                    userId,
+                    type: 'system',
+                    name: name,
+                    avatar: JSON.stringify(avatar)
+                });
+                await newUser.save();
+            }
+        } 
+        try {
+            addSystemUser(-1, '提醒助手', {
+                name: 'ios-notifications',
+                type: 'ionicon',
+                color: '#FFCC33',
+            });
+        } catch(err) {
+            return;
+        }
+    }
+
     async createUser(userInfo: any): Promise<ServiceResult> {
         const { userId, name } = userInfo;
         if(!userId || !name) {
@@ -76,11 +104,18 @@ export class UserService {
         }
     }
 
-    async getMuiltUserBaseInfo(userIds: number[], fields?: string[]): Promise<User[]> {
+    async getMuiltUserBaseInfo(userIds: number[], fields?: string[], useSystem?: boolean = false): Promise<User[]> {
         if(!Array.isArray(userIds)) {
             throw new Error('查询参数不是数组');
         }
         const result: User[] = await this.userModel.find({ userId: userIds }, fields).exec();
+        return result;
+    }
+
+    async getSystemUserBaseInfo(): Promise<User[]> {
+        const result: User[] = await this.userModel.find({ 
+            userId: { $lt: 18 }
+        }).exec();
         return result;
     }
 

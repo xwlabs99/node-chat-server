@@ -91,7 +91,13 @@ export class GroupService implements OnModuleInit {
     async getOneGroupAllInfo(groupId: string): Promise<{ group: Group, userInfos: User[]  }> {
         const group = await this.groupModel.findOne({ groupId }).exec();
         if(group) {
-            const userInfos = await this.userService.getMuiltUserBaseInfo(group.members.map(member => member.userId));
+            const query = await Promise.all([
+                this.userService.getMuiltUserBaseInfo(group.members.map(member => member.userId)),
+                this.userService.getSystemUserBaseInfo()
+            ]);
+            const systemUser: any = query[1] || [];
+            const userInfos = query[0].concat(systemUser);
+            group.members = group.members.concat(systemUser);
             return { group, userInfos };
         } else {
             throw new Error('未找到群聊信息');
