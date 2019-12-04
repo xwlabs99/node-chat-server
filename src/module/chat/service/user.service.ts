@@ -114,7 +114,7 @@ export class UserService implements OnModuleInit {
 
     async getSystemUserBaseInfo(): Promise<User[]> {
         const result: User[] = await this.userModel.find({ 
-            userId: { $lt: 18 }
+            userId: { $lt: 0 }
         }).exec();
         return result;
     }
