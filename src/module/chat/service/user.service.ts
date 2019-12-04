@@ -104,7 +104,7 @@ export class UserService implements OnModuleInit {
         }
     }
 
-    async getMuiltUserBaseInfo(userIds: number[], fields?: string[], useSystem?: boolean = false): Promise<User[]> {
+    async getMuiltUserBaseInfo(userIds: number[], fields?: string[]): Promise<User[]> {
         if(!Array.isArray(userIds)) {
             throw new Error('查询参数不是数组');
         }
