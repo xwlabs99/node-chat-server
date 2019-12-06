@@ -140,7 +140,7 @@ export class GroupController {
         try {
             const { id: userId } = auth;
             const { ignoreAllMsg, ignoreAutoMsg, groupName, alias, announcement } = newInfo;
-            const { group: oldInfo } = await this.groupService.getOneGroupAllInfo(groupId);
+            const oldInfo  = await this.groupService.getOneGroupAllMemberInfo(groupId);
             if(groupName) {
                 oldInfo.groupName = groupName;
                 delete newInfo.groupName;
