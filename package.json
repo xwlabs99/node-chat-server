@@ -38,7 +38,8 @@
     "redis": "^2.8.0",
     "reflect-metadata": "^0.1.12",
     "rimraf": "^2.6.2",
-    "rxjs": "^6.3.3"
+    "rxjs": "^6.3.3",
+    "socket.io-redis": "^5.2.0"
   },
   "devDependencies": {
     "@nestjs/testing": "^6.8.0",
