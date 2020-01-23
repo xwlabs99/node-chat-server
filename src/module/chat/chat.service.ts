@@ -78,7 +78,7 @@ export class ChatService {
         return await this.messageService.removeMsgs(userId, [ messageId ]);
     }
 
-    async processChatTypeMsg(msg: Message) {
+    async processChatTypeMsg(msg: Message | any) {
         try {
             const { groupId, userId, messageId, messageType } = msg;
             if(await this.redis.EXISTS(`msg:${messageId}:${messageType}`)) {
