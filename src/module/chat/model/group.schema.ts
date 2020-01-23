@@ -8,7 +8,7 @@ export const GroupMember = new mongoose.Schema({
     alias: { type: String, required: true },
     ignoreAllMsg: { type: Boolean, default: false },
     ignoreAutoMsg: { type: Boolean, default: false },
-    authority: { type: String, default: '000000000000' },
+    authority: { type: String, default: '11111111111111111' },
 });
 
 export const Group = new mongoose.Schema({
