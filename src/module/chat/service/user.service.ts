@@ -112,6 +112,7 @@ export class UserService implements OnModuleInit {
         return result;
     }
 
+    // 可以缓存
     async getSystemUserBaseInfo(): Promise<User[]> {
         const result: User[] = await this.userModel.find({ 
             userId: { $lt: 0 }

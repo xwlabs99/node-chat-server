@@ -16,7 +16,7 @@ export class Redis {
      */
     async SET(key: string, value: string | number, expire?: number): Promise<boolean> {
         const res = await WrapPromise(Redis.instance.set)(key, value, expire ? 'EX' : undefined, expire);
-        console.log(res);
+        // console.log(res);
         if(res === 'OK') {
             return true;
         } else {

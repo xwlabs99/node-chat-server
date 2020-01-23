@@ -2,12 +2,14 @@ import { Injectable, Controller, Get, Post, Body, Query, Param, Put } from '@nes
 import { GroupService } from '../service/group.service';
 import { UserService } from '../service/user.service';
 import { Group } from '../interface/model.interface';
+import { AuthService } from '../service/authority.service';
 
 @Controller('chat')
 export class GroupController {
     constructor(
-      private readonly groupService: GroupService,
-      private readonly userService: UserService,
+        private readonly groupService: GroupService,
+        private readonly userService: UserService,
+        // private readonly authServie: AuthService,
     ){}
 
     @Post('group')
@@ -64,7 +66,7 @@ export class GroupController {
             } else if (groupType === 'store') {
                 const { groupMember } = data;
                 const groupName = '新建门店'+ new Date().getTime();
-                const initMemberIdArray = [ createrId, ...groupMember];
+                const initMemberIdArray = [ createrId, ...groupMember ];
                 const res_createGroup = await this.groupService.createGroup(createrId, createGroupId, groupName, 'store');
                 const res_addMemebersNum = await this.groupService.addGroupMember(createrId, createGroupId, initMemberIdArray, { shouldSend: true });
                 initMemberIdArray.forEach(userId => {
@@ -166,7 +168,7 @@ export class GroupController {
             console.log(err);
             return {
                 status: 0,
-                message: '更新失败',
+                message: err.message,
             }
         }
         
@@ -177,13 +179,13 @@ export class GroupController {
         try {
             const { isAdd = true, members } = body;
             const { id: operaterId } = auth;
-            console.log(gid, body);
+            // console.log(gid, body);
             if(isAdd) {
                 const res = await this.groupService.addGroupMember(operaterId, gid ,members, { shouldSend: true });
-                members.forEach(uid => {
-                    this.groupService.addToUserGroupList(uid, [ gid ]);
-                })
                 if(res) {
+                    members.forEach(uid => {
+                        this.groupService.addToUserGroupList(uid, [ gid ]);
+                    })
                     return {
                         status: 1,
                     }
@@ -192,10 +194,10 @@ export class GroupController {
                 }
             } else {
                 const res = await this.groupService.moveGroupMember(operaterId, gid, members);
-                members.forEach(uid => {
-                    this.groupService.moveFromUserGroupList(uid, [ gid ]);
-                })
                 if(res) {
+                    members.forEach(uid => {
+                        this.groupService.moveFromUserGroupList(uid, [ gid ]);
+                    })
                     return {
                         status: 1,
                     }

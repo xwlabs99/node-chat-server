@@ -17,6 +17,8 @@ import { ChatService } from './chat.service';
 import { GroupController } from './controller/group.controller';
 import { MessageController } from './controller/message.controller';
 import { PushModule } from '../push/push.module';
+import { AuthService } from './service/authority.service';
+import { AuthController } from './controller/auth.controller';
 
 @Module({
   imports: [
@@ -39,12 +41,14 @@ import { PushModule } from '../push/push.module';
     FriendController,
     GroupController,
     MessageController,
+    AuthController,
   ],
   providers: [
     UserService,
     FriendService,
     GroupService,
     MessageService,
+    AuthService,
     Redis,
     RedisHelper,
     AuthHelper,

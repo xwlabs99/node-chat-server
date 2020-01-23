@@ -8,6 +8,7 @@ import { FriendService } from './service/friend.service';
 import { Message } from './interface/model.interface';
 import { PushGateway } from '../push/push.gateway';
 import { Redis } from '../../provider/redis.provider';
+import { AuthService, AUTH_TYPE } from './service/authority.service';
 const reg = new RegExp('\\/\\{[a-zA-Z_]{1,14}\\}', 'g');
 interface sendOptions {
     checkPermission? : boolean 
@@ -28,6 +29,7 @@ export class ChatService {
         private readonly groupService: GroupService,
         private readonly friendService: FriendService,
         private readonly pushService: PushGateway,
+        private readonly authService: AuthService,
         private readonly redis: Redis,
     ){}
     
@@ -76,13 +78,13 @@ export class ChatService {
         return await this.messageService.removeMsgs(userId, [ messageId ]);
     }
 
-    async processChatTypeMsg(msg: Message | any) {
+    async processChatTypeMsg(msg: Message) {
         try {
-            const { groupId, userId, messageId } = msg;
-            if(await this.redis.EXISTS(`msg:${messageId}`)) {
+            const { groupId, userId, messageId, messageType } = msg;
+            if(await this.redis.EXISTS(`msg:${messageId}:${messageType}`)) {
                 return { status: 1 }
             } else {
-                await this.redis.SET(`msg:${messageId}`, 1, 8);
+                await this.redis.SET(`msg:${messageId}:${messageType}`, 1, 8);
                 const res = await this.sendMessageToGroup(userId, groupId, msg);
                 return res;
             }
@@ -138,9 +140,18 @@ export class ChatService {
                 } else {
                     if(receivers.length === members.length) {
                         return {
-                            status: -2,
+                            status: -2, // 不在群中
                         }
                     }
+                    if(checkPermission) {
+                        const hasPermission = await this.authService.hasAuthorityInGroup(groupId, senderId, AUTH_TYPE.SEND_MSG);
+                        if(hasPermission !== 1) {
+                            return {
+                                status: -3,
+                            }
+                        }
+                    }
+                  
                     msgContent = `${senderInfo.alias}:${msgContent}`;
                 }
             }
@@ -221,12 +232,8 @@ export class ChatService {
             sendStatus: 1,
         };
 
-        const { client, pushToken } = await this._getClient(userId);
-        this.messageService.addToMsgList(targetUserId, newSendSystemMessage);
-        if(client) {
-            client.emit('newMessage', newSendSystemMessage);
-            return null;
-        } else {
+        const pushToken = await this.sendMessageToClient(targetUserId, newSendSystemMessage);
+        if(pushToken) {
             this.pushService.sendPushToOne(pushToken, '新的好友', content);
         }
     }

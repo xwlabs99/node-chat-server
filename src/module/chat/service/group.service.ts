@@ -6,6 +6,9 @@ import { RedisHelper } from '../helper/redisHelper.provider';
 import { Redis } from '../../../provider/redis.provider';
 import { UserService } from './user.service';
 import { ChatService } from '../chat.service';
+import { AuthService, AUTH_TYPE, DEFAULT_GROUP_CREATER_AUTH } from './authority.service';
+
+
 
 
 @Injectable()
@@ -20,6 +23,8 @@ export class GroupService implements OnModuleInit {
         @Inject(forwardRef(() => ChatService))
         private readonly chatService: ChatService,
         private readonly redis: Redis,
+        @Inject(forwardRef(() => AuthService))
+        private readonly authService: AuthService,
        
     ){}
     
@@ -64,28 +69,21 @@ export class GroupService implements OnModuleInit {
         if(group) {
             return group;
         } else {
-            throw new Error('未找到群聊信息');
+            throw new Error('未找到群聊信息或群已解散');
         }
     }  
 
     async getOneGroupAllMemberInfo(groupId: string): Promise<Group> {
         try {
-            const key = this.redisHelper.WithRedisNameSpace(`GMember:${groupId}`);
-            if(false && await this.redis.EXISTS(key)) {
-                const groupMemberIds: string[] = await this.redis.SMEMBER(key);
-                const groupMemberInfo: any = await Promise.all(groupMemberIds.map(async (groupMemberId) => {
-                    return await this.redis.HGETALL(this.redisHelper.WithRedisNameSpace(`gmember:${groupMemberId}`));
-                }));
-                return groupMemberInfo;
-            } else {
-                const group = await this.groupModel.findOne({ groupId }).exec();
-                return group;
+            // const key = this.redisHelper.WithRedisNameSpace(`GMember:${groupId}`);
+            const group = await this.groupModel.findOne({ groupId }).exec();
+            if(!group) {
+                throw new Error('未找到群聊信息');
             }
+            return group;
         } catch(err) {
             throw new Error(err.message);
         }
-        
-       
     }
 
     async getOneGroupAllInfo(groupId: string): Promise<{ group: Group, userInfos: User[]  }> {
@@ -98,9 +96,14 @@ export class GroupService implements OnModuleInit {
             const systemUser: any = query[1] || [];
             const userInfos = query[0].concat(systemUser);
             group.members = group.members.concat(systemUser);
+            group.members = group.members.map(m => {
+                const memberInfo: any = m;
+                memberInfo.authority = undefined;
+                return memberInfo;
+            });
             return { group, userInfos };
         } else {
-            throw new Error('未找到群聊信息');
+            throw new Error('未找到群聊信息或群已解散');
         }
     }  
 
@@ -109,7 +112,7 @@ export class GroupService implements OnModuleInit {
         if(group) {
             return group;
         } else {
-            throw new Error('未找到群聊信息');
+            throw new Error('未找到群聊信息或群已解散');
         }
     }
 
@@ -127,10 +130,15 @@ export class GroupService implements OnModuleInit {
                 operaterInfo = { alias: queryUserInfo.name, userId: queryUserInfo.userId };
             }
             if(group) {
-                // if(!this._hasPermission(operaterId, group)) {
-                //     throw new Error('你没有邀请群成员的权限');
-                // }
-                console.log(group);
+                // 群聊创建者不用判断
+                if(group.groupType !== 'friend' &&  operaterId !== group.createrId) {
+                    const hasPermission = await this.authService.hasAuthorityInGroup(groupId, operaterId, AUTH_TYPE.INVITE_USER);
+                    if(hasPermission !== 1) {
+                        throw new Error('你没有邀请群成员的权限');
+                    }
+                }
+                
+                // console.log(group);
                 const groupMembers = group.members;
                 const filterMembers = memberIds.filter(userId => (groupMembers.findIndex(member => member.userId === userId) === -1));
                 if(filterMembers.length === 0) {
@@ -141,14 +149,17 @@ export class GroupService implements OnModuleInit {
                 const newMembersName = [];
                 const newMembers = userInfos.map(userInfo => {
                     newMembersName.push(userInfo.name);
+                    let authStr = this.authService.getDefaultAuthStr(group.createrId == userInfo.userId ? DEFAULT_GROUP_CREATER_AUTH : null);
                     return new this.groupMemberModel({ 
                         alias: userInfo.name, 
-                        userId: userInfo.userId 
-                    })
+                        userId: userInfo.userId,
+                        authority: authStr,
+                    });
                 });
 
                 group.members = group.members.concat(newMembers);
                 const save = await group.save();
+                await this.authService.cacheGroupAuth(group);
 
                 options.shouldSend && this.chatService.sendSystemMessageToGroup(
                     groupId, 
@@ -156,63 +167,52 @@ export class GroupService implements OnModuleInit {
                     { type: 'normal' }
                 );
 
-
                 if(!save) {
                     throw new Error('添加群成员失败');
                 }
                 return newMembers;
             } else {
-                throw new Error('未找到群聊信息');
+                throw new Error('未找到群聊信息或群已解散');
             }
         } catch(err) {
             throw new Error(err.message);
         }
        
     }
-
-    private _hasPermission(userId: number, groupInfo: Group): boolean {
-        if(userId === groupInfo.createrId){
-            return true;
-        }
-        const findMember = groupInfo.members.find(member => member.userId === userId);
-        if(findMember && (findMember.isAdmin === true)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     
     async moveGroupMember(operaterId: number, groupId: string, memberIds: number[]): Promise<Group> {
-        try {
-            const group = await this.groupModel.findOne({ groupId }).exec();
-            const operaterInfo = group.members.find(member => member.userId === operaterId);
-            if(group) { 
-                const isSelfOperation = (memberIds.length === 1 && memberIds[0] === operaterId);
-                if(isSelfOperation ||this._hasPermission(operaterId, group)) {
-                    const groupMembers = group.members;
-                    const filterMembers = groupMembers.filter(member => {
-                        return memberIds.findIndex(userId => member.userId === userId) === -1;
-                    });
-                    group.members = filterMembers;
-                    
-                    if(isSelfOperation) {
-                        this.chatService.sendSystemMessageToGroup(groupId, `${operaterInfo.alias}退出了群聊`);
-                    } else {
-                        memberIds.forEach((userId) => {
-                            this.chatService.sendSystemMessageToOne(groupId, userId, '你已经被移出群聊');
-                        });
+        const group = await this.groupModel.findOne({ groupId }).exec();
+        const operaterInfo = group.members.find(member => member.userId === operaterId);
+        if(group) { 
+            const isSelfOperation = (memberIds.length === 1 && memberIds[0] === operaterId);
+            const hasPermission = (await this.authService.hasAuthorityInGroup(groupId, operaterId, AUTH_TYPE.REMOVE_USER)) === 1;
+            if(isSelfOperation || hasPermission) {
+                !isSelfOperation && await Promise.all(memberIds.map(async id => {
+                    const isManger = (await this.authService.hasAuthorityInGroup(groupId, id, AUTH_TYPE.MANAGE_AUTH)) === 1;
+                    if(operaterId !== group.createrId && isManger) {
+                        throw new Error('你无法移除管理员用户');
                     }
-                    return await group.save();
-                } else {
-                    throw new Error('你没有删除群成员的权限');
-                }
+                }));
+                const groupMembers = group.members;
+                const filterMembers = groupMembers.filter(member => {
+                    return memberIds.findIndex(userId => member.userId === userId) === -1;
+                });
+                group.members = filterMembers;
                 
+                if(isSelfOperation) {
+                    this.chatService.sendSystemMessageToGroup(groupId, `${operaterInfo.alias}退出了群聊`);
+                } else {
+                    memberIds.forEach((userId) => {
+                        this.chatService.sendSystemMessageToOne(groupId, userId, '你已经被移出群聊');
+                    });
+                }
+                return await group.save();
             } else {
-                throw new Error('未找到群聊信息');
+                throw new Error('你没有删除群成员的权限'+ isSelfOperation);
             }
-        } catch(err) {
-            throw new Error(err.message);
+            
+        } else {
+            throw new Error('未找到群聊信息或群已解散');
         }
     }
 

@@ -10,6 +10,7 @@ import { AuthHelper } from './helper/authHelper.provider';
 import { RedisHelper } from './helper/redisHelper.provider';
 import { ChatService } from './chat.service';
 import { UserService } from './service/user.service';
+import { AuthService } from './service/authority.service';
 
 interface onConnect {
     userId: number,
@@ -41,6 +42,7 @@ export class ChatGateway {
         private readonly authHelper: AuthHelper,
         private readonly redisHelper: RedisHelper,
         private readonly userServie: UserService,
+        private readonly authService: AuthService,
         private readonly redis: Redis,
     ){}
 
@@ -178,6 +180,11 @@ export class ChatGateway {
         return await this.chatService.confirmReceive(userId, messageId);        
     }
     
+    @SubscribeMessage('confirmAuth')
+    async confirmAuthority(client: Client, { userId, groupId, authType }) {
+        return await this.authService.hasAuthorityInGroup(groupId, userId, authType);        
+    }
+
     @SubscribeMessage('uploadPushToken')
     async uploadPushToken(client: Client, { pushToken, userId }) {
         console.log('重置token', userId, pushToken);

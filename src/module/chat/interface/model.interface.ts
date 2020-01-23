@@ -32,7 +32,7 @@ export interface GroupMember extends Document {
     alias: string,
     ignoreAllMsg: boolean,
     ignoreAutoMsg: boolean,
-    isAdmin: boolean,
+    authority: string,
 }
 
 
