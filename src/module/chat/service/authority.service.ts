@@ -3,6 +3,7 @@ import { RedisHelper } from '../helper/redisHelper.provider';
 import { Redis } from '../../../provider/redis.provider';
 import { Message, Group } from '../interface/model.interface';
 import { GroupService } from './group.service';
+import { UserService } from './user.service';
 
 
 
@@ -88,7 +89,8 @@ export class AuthService {
         private readonly helper: RedisHelper,
         private readonly redis: Redis,
         @Inject(forwardRef(() => GroupService))
-        private readonly groupService: GroupService
+        private readonly groupService: GroupService,
+        private readonly userService: UserService
     ){}
     static REDIS_AUTH_FIELD = 'auth';
 
@@ -124,10 +126,11 @@ export class AuthService {
     }
 
     async getGroupAuth(operatorId: number, groupId: string) {
-        const groupInfo  = await this.groupService.getOneGroupAllMemberInfo(groupId);
-        const userInfo = groupInfo.members.find(m => m.userId === Number(operatorId));
-        if((userInfo && userInfo.authority[0] === '1') || Number(operatorId) === groupInfo.createrId) {
-            return groupInfo;
+        const groupInfo  = await this.groupService.getOneGroupAllMemberInfo(groupId, true);
+        const queryUserInfo = groupInfo.members.find(m => m.userId === Number(operatorId));
+        if((queryUserInfo && queryUserInfo.authority[0] === '1') || Number(operatorId) === groupInfo.createrId) {
+            const userInfos = await this.userService.getMuiltUserBaseInfo(groupInfo.members.map(m => m.userId));
+            return [ groupInfo, userInfos ];
         }
         throw new Error('你没有权限查询');
     }

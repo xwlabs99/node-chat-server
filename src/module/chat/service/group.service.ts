@@ -73,7 +73,7 @@ export class GroupService implements OnModuleInit {
         }
     }  
 
-    async getOneGroupAllMemberInfo(groupId: string): Promise<Group> {
+    async getOneGroupAllMemberInfo(groupId: string, addAvatar: boolean = false): Promise<Group> {
         try {
             // const key = this.redisHelper.WithRedisNameSpace(`GMember:${groupId}`);
             const group = await this.groupModel.findOne({ groupId }).exec();
