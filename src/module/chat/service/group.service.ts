@@ -231,7 +231,7 @@ export class GroupService implements OnModuleInit {
                     this.chatService.sendSystemMessageToGroup(groupId, `${operaterInfo.alias}退出了群聊`);
                 } else {
                     memberIds.forEach((userId) => {
-                        this.chatService.sendSystemMessageToOne(groupId, userId, '你已经被移出群聊');
+                        this.chatService.sendSystemMessageToOne(groupId, userId, group.groupName, '你已经被移出群聊');
                     });
                 }
                 return await group.save();

@@ -42,7 +42,7 @@ import { TestController } from './test.controller';
   ],
   exports: [ UserService ],
   controllers: [
-    TestController,
+    // TestController,
     UserController,
     FriendController,
     GroupController,
