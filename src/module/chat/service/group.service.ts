@@ -39,7 +39,7 @@ export class GroupService implements OnModuleInit {
                     }) 
                 });
             });  
-            await this.createGroup(1, 'groupHelper', '群助手', 'system').then(() => {
+            await this.createGroup(0, 'groupHelper', '群助手', 'system').then(() => {
                 this.updateGroupInfo('groupHelper', {
                     avatar: JSON.stringify({
                         name: 'md-people',
@@ -48,7 +48,26 @@ export class GroupService implements OnModuleInit {
                     }) 
                 });
             });  
+            await this.createGroup(0, 'taskHelper', '公告助手', 'system').then(() => {
+                this.updateGroupInfo('taskHelper', {
+                    avatar: JSON.stringify({
+                        name: 'ios-notifications',
+                        type: 'ionicon',
+                        color: '#FFCC33',
+                    }) 
+                });
+            });  
+            await this.createGroup(0, 'tipHelper', '使用帮助', 'system').then(() => {
+                this.updateGroupInfo('tipHelper', {
+                    avatar: JSON.stringify({
+                        name: 'lightbulb-on',
+                        type: 'material-community',
+                        color: '#009966',
+                    }) 
+                });
+            });  
         } catch(err) {
+            console.log(err);
             return;
         }
     }
@@ -56,7 +75,7 @@ export class GroupService implements OnModuleInit {
     async createGroup(createrId: number, groupId: string, groupName: string, groupType: string) {
         const group = await this.groupModel.findOne({ groupId }).exec();
         if(group) {
-            throw new Error('该ID已经存在');
+            return group;
         } else {
             const newGroup = new this.groupModel({ groupId, groupName, groupType, createrId });
             const group = await newGroup.save();
@@ -72,6 +91,15 @@ export class GroupService implements OnModuleInit {
             throw new Error('未找到群聊信息或群已解散');
         }
     }  
+
+    async getGroupInfoById(groupId: string) {
+        console.log(groupId);
+        const group = await this.groupModel.findOne({ groupId }).exec();
+        if(!group) {
+            throw new Error('未找到群聊信息');
+        }
+        return group;
+    }
 
     async getOneGroupAllMemberInfo(groupId: string, addAvatar: boolean = false): Promise<Group> {
         try {

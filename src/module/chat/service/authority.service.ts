@@ -18,7 +18,8 @@ export const AUTH_TYPE = {
     EDIT_ORDER: "EDIT_ORDER",
     SEE_ALL_ORDER: "SEE_ALL_ORDER",
     CHANGE_PACKAGE: "CHANGE_PACKAGE",
-    CHECK_TICKET: "CHECK_TICKET"
+    CHECK_TICKET: "CHECK_TICKET",
+    MANAGE_TASK: "MANAGE_TASK"
 }
 
 export const DEFAULT_GROUP_CREATER_AUTH = (function(){
@@ -38,6 +39,7 @@ export interface Auth {
     SEE_ALL_ORDER?: number,
     CHANGE_PACKAGE?: number,
     CHECK_TICKET?: number,
+    MANAGE_TASK?: number,
 }
 
 const AUTH_TYPE_INFO = {
@@ -80,6 +82,10 @@ const AUTH_TYPE_INFO = {
     CHECK_TICKET: {
         pos: 9,
         des: '验证券码',
+    },
+    MANAGE_TASK: {
+        pos: 10,
+        des: '管理通知',
     }
 }
 
@@ -106,6 +112,7 @@ export class AuthService {
             SEE_ALL_ORDER: 1,
             CHANGE_PACKAGE: 0,
             CHECK_TICKET: 0,
+            MANAGE_TASK: 0,
         };
         if(extraAuth) {
             defaultAuth = Object.assign(defaultAuth, extraAuth);

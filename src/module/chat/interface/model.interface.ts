@@ -43,6 +43,7 @@ export interface Group extends Document {
     announcement: string,
     members: Array<GroupMember>,
     createrId: number,
+    tasks: number[],
 }
 
 export interface Friend extends Document  {

@@ -32,6 +32,7 @@
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "mongoose": "^5.7.1",
+    "mysql": "^2.18.1",
     "push-huawei": "^0.1.7",
     "push-umeng": "^0.2.1",
     "push-xiaomi": "^0.1.6",
@@ -39,7 +40,8 @@
     "reflect-metadata": "^0.1.12",
     "rimraf": "^2.6.2",
     "rxjs": "^6.3.3",
-    "socket.io-redis": "^5.2.0"
+    "socket.io-redis": "^5.2.0",
+    "typeorm": "^0.2.22"
   },
   "devDependencies": {
     "@nestjs/testing": "^6.8.0",

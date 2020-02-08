@@ -58,7 +58,7 @@ export class PushGateway {
 
     }
 
-    async offlinePush(type ,tokens: string[], title, content) {
+    private offlinePush(type ,tokens: string[], title, content) {
         if(type === 'MIPush') {
             this.XiaomiPushClient.push({
                 title: title,
@@ -113,27 +113,12 @@ export class PushGateway {
     }
 
 
-    async sendPushToMuilt(pushTargets: (string|{ pushToken: string })[], title: string, content: string, extra?: string) {
-        const atUsers = [];
-        const pushIds = pushTargets.filter(p => {
-            if(typeof p === 'object') {
-                atUsers.push(p.pushToken);
-                return false;
-            } else {
-                return true;
-            }
-        })
-
-        const pushTargetInfos: any = await Promise.all([
-            this.pushUserModel.find({ _id: pushIds }).exec(),
-            (atUsers.length !== 0 ? this.pushUserModel.find({ _id: atUsers }).exec() : []),
-        ]);
-        console.log(atUsers, pushIds);
-        pushIds.length !== 0 &&this._processTarget(pushTargetInfos[0], title, content);
-        atUsers.length !== 0 && this._processTarget(pushTargetInfos[1], title, extra + content);
+    async sendPushToMuilt(pushUserIds: string[], title: string, content: string, extra?: string) {
+        const pushTargetInfos: PushUser[] = await this.pushUserModel.find({ _id: pushUserIds }).exec();
+        this._processTarget(pushTargetInfos, title, extra + content);
     }
 
-    _processTarget(targets, title, content) {
+    _processTarget(targets: PushUser[], title, content) {
         // console.log('准备推送', pushIds, pushTargetInfos);
         const MiPush = [];
         const HuaweiPush = [];

@@ -27,5 +27,6 @@ export const Group = new mongoose.Schema({
     members: [GroupMember],
     createrId: Number,
     avatar: String,
+    tasks: { type: [ Number ], default: [] }
 });
 

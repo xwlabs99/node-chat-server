@@ -5,7 +5,7 @@ import { UserService } from './service/user.service';
 import { MessageService } from './service/message.service';
 import { GroupService } from './service/group.service';
 import { FriendService } from './service/friend.service';
-import { Message } from './interface/model.interface';
+import { Message, GroupMember } from './interface/model.interface';
 import { PushGateway } from '../push/push.gateway';
 import { Redis } from '../../provider/redis.provider';
 import { AuthService, AUTH_TYPE } from './service/authority.service';
@@ -14,6 +14,14 @@ interface sendOptions {
     checkPermission? : boolean 
 }
 
+const SPECIAL_TIPS_INFO = {
+    atMe: {
+        pos: 0
+    },
+    newTask: {
+        pos: 1,
+    }
+}
 
 
 @Injectable()
@@ -56,6 +64,16 @@ export class ChatService {
             default:
                 return content;
         }
+    }
+
+    makeSpecialTipsStr(specialArr: string[]) {
+        let str = '00000000';
+        specialArr.forEach(tip => {
+            if(SPECIAL_TIPS_INFO[tip]) {
+                str = replacePos(str, SPECIAL_TIPS_INFO[tip].pos, 1); 
+            }
+        });
+        return str;
     }
 
     private async _getClient(userId: number): Promise<{ client: Socket, pushToken: string }> {
@@ -104,6 +122,43 @@ export class ChatService {
         } else {
             return pushToken; // pushtoken为null则说明不在线
         }
+    }
+
+    getSendOptions(msg: Message, receivers: GroupMember[]) {
+        const isAutoMsg = msg.messageType === 'text' && msg.content.includes('[自动消息]');
+        let forcePushUser;
+        let contentPrefix;
+        let specialTips = undefined;
+        if(msg.messageType === 'text' && msg.content.includes('@')) {
+            forcePushUser = (msg.content.match(/@[^\s]+\s*/g)|| []).map(s => s.replace(/[@\s]/g, ''));
+            contentPrefix = '[有人@我]';
+            specialTips = (forcePushUser.length !== 0) && this.makeSpecialTipsStr([ 'atMe' ]);
+        } else if(msg.messageType === 'task'){
+            forcePushUser = receivers.map(receiver => receiver.alias);
+            contentPrefix = '[新通知]';
+            specialTips = this.makeSpecialTipsStr([ 'newTask' ]);
+        }
+
+        const reveiversInfo = receivers.map(receiver => {
+            let shouldPush = false;
+            let pushContentPrefix = undefined;
+            if(forcePushUser && forcePushUser.includes(receiver.alias)) {
+                shouldPush = true;
+                pushContentPrefix = contentPrefix;
+            } else if(receiver.ignoreAllMsg || (isAutoMsg && receiver.ignoreAutoMsg)){
+                shouldPush = false;
+            } else {
+                shouldPush = true;
+            }
+
+            return {
+                receiver,
+                msg: { ...msg, specialTips }, 
+                shouldPush,
+                pushContentPrefix,
+            }
+        });
+        return reveiversInfo;
     }
 
     async sendMessageToGroup(senderId: number, groupId: string, msg: Message | any, options?: sendOptions) {
@@ -156,29 +211,25 @@ export class ChatService {
                 }
             }
 
-            const isAutoMsg = msg.messageType === 'text' && msgContent.includes('[自动消息]');
-            let forcePushUser = [];
-            if(msg.messageType === 'text') {
-                forcePushUser = (msg.content.match(/@[^\s]+\s*/g)|| []).map(s => s.replace(/[@\s]/g, '')) ;
-                // console.log(forcePushUser);
-            }
+           
 
-            const pushTargets = (await Promise.all(receivers.map(async (receiver) => {
-                const forcePush = forcePushUser.includes(receiver.alias);
-                // console.log(receiver.alias, forcePush);
-                const pushToken = await this.sendMessageToClient(receiver.userId, { ...msg, atMe: forcePush });
-                if(forcePush) {
-                    return { pushToken };
-                } else if(receiver.ignoreAllMsg) {
-                    return null;
-                } else if(isAutoMsg && receiver.ignoreAutoMsg) {
-                    return null;
-                } else {
-                    return pushToken;
+            // 这个函数为msg添加了字段
+            const processedReceiverInfoArr = this.getSendOptions(msg, receivers);
+            const pushTargetClassifyByPrefix = {};
+            await Promise.all(processedReceiverInfoArr.map(async ({ receiver, msg: targetMsg, shouldPush, pushContentPrefix }) => {
+                const pushToken = await this.sendMessageToClient(receiver.userId, targetMsg);
+                if(shouldPush && pushToken) {
+                    if(!pushTargetClassifyByPrefix[pushContentPrefix]) {
+                        pushTargetClassifyByPrefix[pushContentPrefix] = [ pushToken ];
+                    } else {
+                        pushTargetClassifyByPrefix[pushContentPrefix].push(pushToken);
+                    }
                 }
-            }))).filter(pushTarget => pushTarget);
-
-            this.pushService.sendPushToMuilt(pushTargets, groupName, msgContent, '[有人@我]');
+            }));
+            Object.keys(pushTargetClassifyByPrefix).forEach(prefix => {
+                this.pushService.sendPushToMuilt(pushTargetClassifyByPrefix[prefix], groupName, prefix + msgContent);
+            });
+           
 
 
             return {
@@ -187,7 +238,7 @@ export class ChatService {
         } catch(err) {
             console.log(err);
             return {
-                status: 0,
+                status: -4,
             }
         }
     }
@@ -213,12 +264,42 @@ export class ChatService {
         this.sendMessageToGroup(userId, gid, newSendSystemMessage, { checkPermission: false });
     }
 
-    async sendSystemMessageToOne(groupId:string, targetUserId: number, content: string, payload?: object) {
+    async sendNormalMessageToOne(groupId:string, senderId: number, targetUserId: number, type: string, title: string, content: string, options?: { shouldPush: boolean }) {
+        if(!options) {
+            options = {
+                shouldPush: true,
+            }
+        }
+
+        const newSendMessage: any = {
+            messageId: `${groupId}:${senderId}:${new Date().getTime()}`,
+            messageType: type,
+            userId: senderId,
+            groupId: groupId,
+            time: new Date().getTime(),
+            renderTime: true,
+            content: content,
+            sendStatus: 1,
+        };
+
+        const pushToken = await this.sendMessageToClient(targetUserId, newSendMessage);
+        if(pushToken && options.shouldPush) {
+            this.pushService.sendPushToOne(pushToken, title, content);
+        }
+    }
+
+    async sendSystemMessageToOne(groupId:string, targetUserId: number, title: string, content: string, payload?: object, extraMsg?: object, options?: { shouldPush: boolean }) {
         if(!payload) {
             payload = { type: 'normal' };
         }
+        if(!options) {
+            options = {
+                shouldPush: true,
+            }
+        }
+
         const userId = 0;
-        const newSendSystemMessage: any = {
+        const newSendSystemMessage: any = Object.assign({
             messageId: `${groupId}:${userId}:${new Date().getTime()}`,
             messageType: 'system',
             userId,
@@ -230,11 +311,11 @@ export class ChatService {
                 ...payload,
             },
             sendStatus: 1,
-        };
+        }, extraMsg || {});
 
         const pushToken = await this.sendMessageToClient(targetUserId, newSendSystemMessage);
-        if(pushToken) {
-            this.pushService.sendPushToOne(pushToken, '新的好友', content);
+        if(pushToken && options.shouldPush) {
+            this.pushService.sendPushToOne(pushToken, title, content);
         }
     }
 
@@ -244,11 +325,26 @@ export class ChatService {
             const { targetUserId, userId, tips } = data;
             console.log('新好友申请', data);
             const { name: userName }: any  = await this.userService.getRedisUserInfo(userId, [ 'name' ]);
-            this.sendSystemMessageToOne('friendInvite', targetUserId, `${userName} 请求添加您为好友`, {
+            this.sendSystemMessageToOne('friendInvite', targetUserId, '新的好友', `${userName} 请求添加您为好友`, {
                 type: 'friendInvitation', 
                 userId: userId,
                 tips,
             });
         }
     }
+}
+
+function replacePos(strObj, pos, replacetext) {
+    if(pos !== 0 && !pos) {
+        throw new Error('出现错误');
+    }
+    let str;
+    if(pos === 0) {
+        str = replacetext + strObj.substring(1);
+    } else if(pos === strObj.length - 1){
+        str = strObj.substr(0, strObj.length - 1) + replacetext;
+    } else {
+        str = strObj.substring(0, pos) + replacetext + strObj.substring(pos + 1);
+    }
+    return str;
 }

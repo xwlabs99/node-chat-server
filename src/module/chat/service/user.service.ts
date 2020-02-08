@@ -39,6 +39,11 @@ export class UserService implements OnModuleInit {
                 type: 'ionicon',
                 color: '#FFCC33',
             });
+            addSystemUser(-2, '使用帮助', {
+                name: 'lightbulb-on',
+                type: 'material-community',
+                color: '#009966',
+            });
         } catch(err) {
             return;
         }

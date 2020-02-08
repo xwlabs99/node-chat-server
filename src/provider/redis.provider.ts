@@ -100,7 +100,7 @@ export class Redis {
      * @param key 键名
      * @returns 返回集合新增成员数
      */
-    async SADD(key: string, values: string[] = []): Promise<boolean> {
+    async SADD(key: string, values: any[] = []): Promise<boolean> {
         const res = await WrapPromise(Redis.instance.sadd)(key, ...values);
         console.log(res);
         return res;
@@ -111,7 +111,7 @@ export class Redis {
      * @returns 返回所有成员
      */
 
-    async SMEMBER(key: string): Promise<string[]> {
+    async SMEMBER(key: string): Promise<any[]> {
         const res = await WrapPromise(Redis.instance.smembers)(key);
         return res;
     }

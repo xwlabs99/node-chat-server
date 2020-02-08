@@ -11,6 +11,7 @@ import { RedisHelper } from './helper/redisHelper.provider';
 import { ChatService } from './chat.service';
 import { UserService } from './service/user.service';
 import { AuthService } from './service/authority.service';
+const moment = require('moment');
 
 interface onConnect {
     userId: number,
@@ -56,12 +57,14 @@ export class ChatGateway {
         const { id: socketId } = client;
         const { authToken, userId, name } = data;
         const auth: any = await this.authHelper.JWTverify(authToken);
-        // console.log(auth, userId);
+        console.log(auth, userId);
         if(auth && auth.id === userId) {
             const findUser = await this.userServie.getOneUserInfo(userId);
+            console.log(findUser)
             if(!findUser) {
                 console.log('创建新用户');
                 await this.chatService.initUserInfo(userId, name);
+                await this.chatService.sendNormalMessageToOne('tipHelper', -2, userId, 'text', '使用帮助', `欢迎使用百灵鸟企业管理APP！`, { shouldPush: false });
             }
 
             const connectInfo: any = await this._getUserLoginInfo(userId);
@@ -79,10 +82,12 @@ export class ChatGateway {
                 if(!data.loginTimestamp) {
                      // 异地登录界面登录
                     console.log('无时间戳登录');
+
                     const loginTimestamp = String(new Date().getTime());
                     const oldClient = this._getClient(connectInfo.socketId);
                     oldClient && (oldClient.emit('forceLogout'));
                     this._setUserLoginInfo({...data, socketId, loginTimestamp });
+                    await this.chatService.sendNormalMessageToOne('tipHelper', -2, userId, 'text', '使用帮助', `欢迎登录, 现在是${moment().format('YYYY-MM-DD HH:mm')}`, { shouldPush: false });
                     return {
                         status: 1,
                         loginTimestamp

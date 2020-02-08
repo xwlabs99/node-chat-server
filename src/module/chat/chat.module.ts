@@ -19,7 +19,11 @@ import { MessageController } from './controller/message.controller';
 import { PushModule } from '../push/push.module';
 import { AuthService } from './service/authority.service';
 import { AuthController } from './controller/auth.controller';
-
+import { MysqlModule } from '../../provider/mysql/mysql.module';
+import { TaskMysqlProviders } from './model/mysql/index.provider';
+import { TaskService } from './service/task.service';
+import { TaskController } from './controller/task.controller';
+import { TestController } from './test.controller';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -34,14 +38,17 @@ import { AuthController } from './controller/auth.controller';
       { name: 'GroupItem', schema: UserGroupItem },
     ]),
     PushModule,
+    MysqlModule,
   ],
   exports: [ UserService ],
   controllers: [
+    TestController,
     UserController,
     FriendController,
     GroupController,
     MessageController,
     AuthController,
+    TaskController,
   ],
   providers: [
     UserService,
@@ -53,7 +60,9 @@ import { AuthController } from './controller/auth.controller';
     RedisHelper,
     AuthHelper,
     ChatGateway,
-    ChatService
+    ChatService,
+    ...TaskMysqlProviders,
+    TaskService
   ],
 })
 export class ChatModule {}

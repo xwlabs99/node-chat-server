@@ -75,7 +75,7 @@ export class UserController {
     }
 
     @Put('user/info/:id')
-    async updateUserInfo(@Param('id') userId, @Body() userInfo: User) {
+    async updateUserInfo(@Param('id') userId, @Body('data') userInfo: User) {
         try {
             const result = await this.userService.updateUser(userId, userInfo);
             if(result) {
