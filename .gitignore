@@ -34,3 +34,5 @@ lerna-debug.log*
 !.vscode/extensions.json
 *.pem
 src/module/push/config.ts
+
+test.*

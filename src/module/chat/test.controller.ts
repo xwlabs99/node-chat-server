@@ -15,10 +15,6 @@ export class TestController {
 
     @Get()
     async getChatServiceConfig(@Body('authorization') auth) {
-        this.chatService.sendSystemMessageToOne('taskHelper', 1, '你有新的公告信息', {
-            type: 'task',
-            taskId: 1,
-            taskType: 'notice',
-        });
+
     }
 }

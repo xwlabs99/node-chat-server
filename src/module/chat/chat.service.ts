@@ -61,6 +61,8 @@ export class ChatService {
                 return content.text;
             case 'text':
                 return content.replace(reg, '[表情]');
+            case 'task':
+                return content.description;
             default:
                 return content;
         }
