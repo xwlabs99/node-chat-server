@@ -42,7 +42,7 @@ export class TaskService {
         const processRecord = JSON.stringify([
             { date: new Date().getTime(), operatorId, infoChange: taskInfo },
         ]);
-        return await this.taskRepository.save({ ...taskInfo, processRecord, createdDate: moment().format('YYYY-MM-DD') });
+        return await this.taskRepository.save({ ...taskInfo, processRecord, createdDate: moment().format('YYYY-MM-DD'), createdTime: new Date().getTime().toString() });
     }
 
     async addToGroupTaskList(groupId: string, taskId: number): Promise<Group> {

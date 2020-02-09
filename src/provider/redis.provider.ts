@@ -101,6 +101,9 @@ export class Redis {
      * @returns 返回集合新增成员数
      */
     async SADD(key: string, values: any[] = []): Promise<boolean> {
+        if(values.length === 0) {
+            return true;
+        }
         const res = await WrapPromise(Redis.instance.sadd)(key, ...values);
         console.log(res);
         return res;

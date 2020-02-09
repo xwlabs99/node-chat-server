@@ -23,7 +23,7 @@ import { MysqlModule } from '../../provider/mysql/mysql.module';
 import { TaskMysqlProviders } from './model/mysql/index.provider';
 import { TaskService } from './service/task.service';
 import { TaskController } from './controller/task.controller';
-import { TestController } from './test.controller';
+// import { TestController } from './test.controller';
 @Module({
   imports: [
     MongooseModule.forFeature([

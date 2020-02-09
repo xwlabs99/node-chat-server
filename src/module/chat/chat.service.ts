@@ -141,7 +141,7 @@ export class ChatService {
 
         const reveiversInfo = receivers.map(receiver => {
             let shouldPush = false;
-            let pushContentPrefix = undefined;
+            let pushContentPrefix = '0';
             if(forcePushUser && forcePushUser.includes(receiver.alias)) {
                 shouldPush = true;
                 pushContentPrefix = contentPrefix;
@@ -226,8 +226,10 @@ export class ChatService {
                     }
                 }
             }));
+
+            console.log(pushTargetClassifyByPrefix);
             Object.keys(pushTargetClassifyByPrefix).forEach(prefix => {
-                this.pushService.sendPushToMuilt(pushTargetClassifyByPrefix[prefix], groupName, prefix + msgContent);
+                this.pushService.sendPushToMuilt(pushTargetClassifyByPrefix[prefix], groupName, (prefix === '0' ? '' : prefix) + msgContent);
             });
            
 

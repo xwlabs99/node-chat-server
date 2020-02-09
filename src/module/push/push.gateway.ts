@@ -113,9 +113,9 @@ export class PushGateway {
     }
 
 
-    async sendPushToMuilt(pushUserIds: string[], title: string, content: string, extra?: string) {
+    async sendPushToMuilt(pushUserIds: string[], title: string, content: string) {
         const pushTargetInfos: PushUser[] = await this.pushUserModel.find({ _id: pushUserIds }).exec();
-        this._processTarget(pushTargetInfos, title, extra + content);
+        this._processTarget(pushTargetInfos, title, content);
     }
 
     _processTarget(targets: PushUser[], title, content) {

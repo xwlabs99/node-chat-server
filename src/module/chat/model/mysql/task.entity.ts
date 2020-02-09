@@ -20,8 +20,8 @@ export class Task {
     @Column({ default: 1, nullable: false })
     status: number;
 
-    @CreateDateColumn()
-    createdTime: number;
+    @Column({ })
+    createdTime: string;
 
     @Column({ type: 'text', nullable: true })
     imageList: string;
