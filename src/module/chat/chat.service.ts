@@ -134,7 +134,6 @@ export class ChatService {
         if(msg.messageType === 'text' && msg.content.includes('@')) {
             forcePushUser = (msg.content.match(/@[^\s]+\s*/g)|| []).map(s => s.replace(/[@\s]/g, ''));
             contentPrefix = '[有人@我]';
-            specialTips = (forcePushUser.length !== 0) && this.makeSpecialTipsStr([ 'atMe' ]);
         } else if(msg.messageType === 'task'){
             forcePushUser = receivers.map(receiver => receiver.alias);
             contentPrefix = '[新通知]';
@@ -144,9 +143,11 @@ export class ChatService {
         const reveiversInfo = receivers.map(receiver => {
             let shouldPush = false;
             let pushContentPrefix = '0';
+            let _specialTips = null;
             if(forcePushUser && forcePushUser.includes(receiver.alias)) {
                 shouldPush = true;
                 pushContentPrefix = contentPrefix;
+                _specialTips = this.makeSpecialTipsStr([ 'atMe' ]);
             } else if(receiver.ignoreAllMsg || (isAutoMsg && receiver.ignoreAutoMsg)){
                 shouldPush = false;
             } else {
@@ -155,11 +156,12 @@ export class ChatService {
 
             return {
                 receiver,
-                msg: { ...msg, specialTips }, 
+                msg: { ...msg, specialTips: _specialTips || specialTips }, 
                 shouldPush,
                 pushContentPrefix,
             }
         });
+        console.log(reveiversInfo);
         return reveiversInfo;
     }
 
@@ -171,7 +173,7 @@ export class ChatService {
 
             // 这里加缓存优化
             let { members, groupType, groupName } = await this.groupService.getOneGroupAllMemberInfo(groupId);
-            console.log(members);
+            // console.log(members);
             let senderInfo;
             const receivers = members.filter(member => {
                 if(member.userId !== senderId) {
@@ -229,7 +231,7 @@ export class ChatService {
                 }
             }));
 
-            console.log(pushTargetClassifyByPrefix);
+            // console.log(pushTargetClassifyByPrefix);
             Object.keys(pushTargetClassifyByPrefix).forEach(prefix => {
                 this.pushService.sendPushToMuilt(pushTargetClassifyByPrefix[prefix], groupName, (prefix === '0' ? '' : prefix) + msgContent);
             });

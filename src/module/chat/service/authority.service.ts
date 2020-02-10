@@ -175,8 +175,10 @@ export class AuthService {
 
     async hasAuthorityInGroup(groupId: string, userId: number, authType: string): Promise<number> {
         const cacheKey = this.WrapInfoKey(groupId, userId);
+        console.log(groupId, userId, authType);
         if(await this.redis.EXISTS(cacheKey)) {
             const value = await this.redis.GET(cacheKey);
+            console.log('已经缓存', value, AUTH_TYPE_INFO[authType].pos);
             this.redis.SET(cacheKey, value, 300);
             return Number(value[AUTH_TYPE_INFO[authType].pos]);
         } else {
@@ -187,11 +189,12 @@ export class AuthService {
                 if(!member.authority) {
                     throw new Error('该群不支持权限管理');
                 }
-                if(member.userId === userId) {
+                if(Number(member.userId) === Number(userId)) {
                     ans = member.authority;
                 }
                 this.redis.SET(this.WrapInfoKey(groupId, member.userId), member.authority, 300);
             });
+            console.log('没有缓存', ans, AUTH_TYPE_INFO[authType].pos);
             return ans ? Number(ans[AUTH_TYPE_INFO[authType].pos]) : 0;
         }
     }
