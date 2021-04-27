@@ -36,7 +36,7 @@
     "push-huawei": "^0.1.7",
     "push-umeng": "^0.2.1",
     "push-xiaomi": "^0.1.6",
-    "redis": "^2.8.0",
+    "redis": "^3.1.1",
     "reflect-metadata": "^0.1.12",
     "rimraf": "^2.6.2",
     "rxjs": "^6.3.3",
